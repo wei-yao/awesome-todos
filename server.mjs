@@ -13,6 +13,10 @@ const validDueDate = (value) => value === undefined || value === ""
     && new Date(value + "T00:00:00Z").toISOString().slice(0, 10) === value);
 const finite = (value) => Number.isFinite(value) && value >= 0;
 const unique = (items) => new Set(items.map((item) => item?.id)).size === items.length;
+const validMottos = (items) => Array.isArray(items) && items.length <= 200 && unique(items)
+  && items.every((entry) => entry && text(entry.id, 128) && entry.id.length > 0
+    && ["focus", "rest"].includes(entry.pool) && text(entry.text, 200) && entry.text.trim().length > 0
+    && Object.keys(entry).every((key) => ["id", "pool", "text"].includes(key)));
 const item = (value) => value && text(value.id, 128) && value.id.length > 0
   && text(value.text, 200) && value.text.trim().length > 0
   && typeof value.done === "boolean" && optionalText(value.notes, 4000) && validDueDate(value.dueDate);
@@ -20,6 +24,7 @@ const item = (value) => value && text(value.id, 128) && value.id.length > 0
 export function validState(value)
 {
   return Boolean(value && Array.isArray(value.tasks) && value.tasks.length <= 1000 && unique(value.tasks)
+    && (value.mottos === undefined || validMottos(value.mottos))
     && value.tasks.every((task) => item(task) && (task.steps === undefined
       || (Array.isArray(task.steps) && task.steps.length <= 500 && task.steps.every(item) && unique(task.steps))))
     && Array.isArray(value.history) && value.history.length <= 20000

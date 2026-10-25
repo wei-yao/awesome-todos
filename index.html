@@ -127,9 +127,13 @@
     .support p { margin: 0 0 8px; }
     .quiet-actions { display: flex; flex-wrap: wrap; gap: 6px; }
     .quiet-actions button { border: 1px solid var(--line); border-radius: 7px; background: transparent; color: inherit; padding: 4px 8px; font-size: 11px; }
-    .support details { margin-top: 10px; font-size: 11px; }
-    .support summary { cursor: pointer; }
-    .support a { color: var(--accent); }
+    .settings-card { padding: 22px; }
+    .motto-list { list-style: none; margin: 16px 0; padding: 0; }
+    .motto-item { border-top: 1px solid var(--line); padding: 12px 0; }
+    .motto-item textarea { min-height: 60px; }
+    .motto-item select { max-width: 100%; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 4px 8px; }
+    .settings-copy { font-size: 12px; color: var(--muted); }
+    .settings-copy.error { color: var(--danger); }
     .rest-prompt { margin-top: 14px; font-size: 13px; color: var(--accent); }
     .rest-suggestion { margin-top: 14px; font-size: 12px; color: var(--muted); }
     .rest-suggestion p { margin: 0 0 8px; }
@@ -191,6 +195,7 @@
       </div>
     </div>
     <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <div id="home-view">
     <section class="card tasks-card" aria-labelledby="tasks-heading">
       <div class="section-head"><h2 id="tasks-heading">今日待办</h2><span id="task-count" class="count"></span></div>
       <div class="task-filters" role="group" aria-label="任务视图">
@@ -258,18 +263,9 @@
           <p id="support-quote"></p>
           <div class="quiet-actions">
             <button id="quote-next" type="button">换一句</button>
-            <button id="quote-hide" type="button">不再显示这句</button>
           </div>
         </div>
-        <div class="quiet-actions"><button id="quote-toggle" type="button">关闭短句</button></div>
         <p id="support-error" role="status" hidden></p>
-        <details>
-          <summary>关于这些短句</summary>
-          <p>原创提炼，非原著引语。普通短句参考习惯养成、认知加工疗法（CPT）与接纳承诺疗法（ACT），休息短句独立轮换。CPT 是认知行为治疗（CBT）的一种具体疗法，不是其别名。</p>
-          <p>仅作一般性支持，不是 ADHD、PTSD 治疗或创伤处理练习。12 小时轮换和 5 分钟休息是产品默认值，不是临床处方。</p>
-          <p id="support-sources"></p>
-          <div class="quiet-actions"><button id="quote-restore" type="button">恢复隐藏的短句</button></div>
-        </details>
       </aside>
     </section>
     <section class="history" aria-labelledby="history-heading">
@@ -279,12 +275,37 @@
     </section>
     <footer><span class="leaf">✧</span>小小进展，也是进展。<br><span id="storage-caption">自动保存在此浏览器 · 无需登录</span>
       <div class="backup-controls">
+        <button id="motto-settings-open" type="button">格言设置</button>
         <button id="export-backup" type="button">导出 JSON 备份</button>
         <button id="import-backup" type="button">导入备份</button>
         <button id="clear-history" type="button">清空历史</button>
         <input id="backup-file" type="file" accept=".json,application/json" aria-label="选择备份文件" hidden>
       </div>
     </footer>
+    </div>
+    <section id="settings-view" class="card settings-card" aria-labelledby="settings-heading" hidden>
+      <div class="section-head">
+        <h2 id="settings-heading" tabindex="-1">格言设置</h2>
+        <button id="settings-back" class="secondary" type="button">返回首页</button>
+      </div>
+      <p class="settings-copy">管理普通和休息格言，云模式随账号同步。每句最多 200 字符，共最多 200 条。修改后请保存。</p>
+      <p id="motto-save-status" class="settings-copy" role="status" aria-live="polite"></p>
+      <div id="motto-drafts" class="quiet-actions" hidden>
+        <select id="motto-draft-select" aria-label="未保存格言草稿"></select>
+        <button id="motto-draft-open" type="button">查看草稿</button>
+        <button id="motto-draft-discard" type="button">丢弃所选草稿</button>
+      </div>
+      <form id="motto-form">
+        <ul id="motto-list" class="motto-list"></ul>
+        <p id="motto-empty" class="settings-copy" hidden>句库是空的。想添加时，再写一句就好。</p>
+        <div class="quiet-actions">
+          <button id="motto-add" type="button">新增格言</button>
+          <button id="motto-save" type="submit">保存句库</button>
+          <button id="motto-reset-editor" type="button">放弃修改，加载当前句库</button>
+          <button id="motto-export-editor" type="button">导出编辑草稿</button>
+        </div>
+      </form>
+    </section>
   </main>
   <script src="./support-content.js"></script>
   <script>
@@ -359,11 +380,16 @@
         && new Date(value + "T00:00:00Z").toISOString().slice(0, 10) === value);
     const finite = (value) => Number.isFinite(value) && value >= 0;
     const unique = (items) => new Set(items.map((item) => item?.id)).size === items.length;
+    const validMottos = (items) => Array.isArray(items) && items.length <= 200 && unique(items)
+      && items.every((entry) => entry && text(entry.id, 128) && entry.id.length > 0
+        && ["focus", "rest"].includes(entry.pool) && text(entry.text, 200) && entry.text.trim().length > 0
+        && Object.keys(entry).every((key) => ["id", "pool", "text"].includes(key)));
     const item = (value) => value && text(value.id, 128) && value.id.length > 0
       && text(value.text, 200) && value.text.trim().length > 0
       && typeof value.done === "boolean" && optionalText(value.notes, 4000) && validDueDate(value.dueDate);
     function validState(value) {
       return Boolean(value && Array.isArray(value.tasks) && value.tasks.length <= 1000 && unique(value.tasks)
+        && (value.mottos === undefined || validMottos(value.mottos))
         && value.tasks.every((task) => item(task) && (task.steps === undefined
           || (Array.isArray(task.steps) && task.steps.length <= 500 && task.steps.every(item) && unique(task.steps))))
         && Array.isArray(value.history) && value.history.length <= 20000
@@ -386,6 +412,7 @@
       if (value.tasks?.length > 1000) return "最多保留 1000 条任务，请先删除不需要的任务。";
       if (Array.isArray(value.tasks) && value.tasks.some((task) => task?.steps?.length > 500)) return "每条任务最多 500 个步骤，请先整理步骤。";
       if (value.history?.length > 20000) return "最多保留 20000 条历史，请先导出备份，再清空历史。";
+      if (value.mottos !== undefined && !validMottos(value.mottos)) return "格言格式无效：最多 200 条，每句 1–200 字符，使用不同 ID 并选择普通或休息场景。当前数据未更改。";
       if (!validState(value)) return "数据格式无效：请检查长度、重复 ID、截止日期和计时数值。当前数据未更改。";
       // Reserve the largest revision and a UUID, including the entire UTF-8 request envelope.
       const body = { revision: Number.MAX_SAFE_INTEGER, mutationId: "0".repeat(36), state: value };
@@ -440,19 +467,27 @@
       rest: supportContent.rest
     };
     const restSuggestions = supportContent.suggestions;
-    for (const group of quoteGroups) {
-      const link = document.createElement("a");
-      link.href = group.url;
-      link.textContent = group.source;
-      const source = document.createElement("span");
-      source.textContent = " · ";
-      if ($("support-sources").children.length) $("support-sources").append(source);
-      $("support-sources").append(link);
+    const defaultMottos = [
+      ...quotePools.focus.map((text, index) => ({ id: `default-focus-${index}`, pool: "focus", text })),
+      ...quotePools.rest.map((text, index) => ({ id: `default-rest-${index}`, pool: "rest", text }))
+    ];
+    const mottos = (value = state) => value.mottos ?? defaultMottos;
+    const poolMottos = (pool) => mottos().filter((entry) => entry.pool === pool);
+    function mottoOrigin(entry) {
+      const original = defaultMottos.find((item) => item.id === entry.id);
+      if (!original) return "自定义";
+      if (original.text !== entry.text || original.pool !== entry.pool) return "已修改 · 非原著引语";
+      return entry.pool === "rest" ? "原创休息短句" : `${quoteGroups[Math.floor(defaultMottos.indexOf(original) / 6)].source} · 原创提炼`;
     }
     const quoteWindow = () => Math.floor(Date.now() / QUOTE_WINDOW);
+    function quoteSelection(pool, window = quoteWindow()) {
+      const entries = poolMottos(pool);
+      const entry = entries.length ? entries[((window % entries.length) + entries.length) % entries.length] : null;
+      return { window, id: entry?.id || "", text: entry?.text || "" };
+    }
     const defaultSupport = () => ({
-      enabled: true, hidden: [], focus: { window: quoteWindow(), index: quoteWindow() % 18 },
-      rest: { window: quoteWindow(), index: quoteWindow() % 6 }, suggestion: 0, skipId: ""
+      version: 2, enabled: true, hidden: [], focus: quoteSelection("focus"),
+      rest: quoteSelection("rest"), suggestion: 0, skipId: ""
     });
     let supportStorageFailed = false;
     function loadSupport() {
@@ -460,13 +495,29 @@
         const raw = localStorage.getItem(SUPPORT_KEY);
         if (raw === null) return defaultSupport();
         const prefs = JSON.parse(raw);
+        if (prefs && prefs.version === undefined) {
+          if (!Array.isArray(prefs.hidden) || !prefs.hidden.every((key) => /^(focus:(?:[0-9]|1[0-7])|rest:[0-5])$/.test(key))
+            || !["focus", "rest"].every((pool) => prefs[pool] && Number.isSafeInteger(prefs[pool].window)
+              && Number.isInteger(prefs[pool].index) && prefs[pool].index >= 0 && prefs[pool].index < quotePools[pool].length)) {
+            throw new Error("Invalid legacy support preferences");
+          }
+          prefs.hidden = prefs.hidden.map((key) => "default-" + key.replace(":", "-"));
+          for (const pool of ["focus", "rest"]) {
+            const selection = prefs[pool];
+            prefs[pool] = { window: selection.window, id: `default-${pool}-${selection.index}`, text: quotePools[pool][selection.index] };
+          }
+          prefs.version = 2;
+        }
         if (!prefs || typeof prefs.enabled !== "boolean" || !Array.isArray(prefs.hidden)
-          || !prefs.hidden.every((key) => /^(focus:(?:[0-9]|1[0-7])|rest:[0-5])$/.test(key))
+          || prefs.version !== 2 || !prefs.hidden.every((key) => typeof key === "string" && key.length > 0 && key.length <= 128)
           || !["focus", "rest"].every((pool) => prefs[pool] && Number.isSafeInteger(prefs[pool].window)
-            && Number.isInteger(prefs[pool].index) && prefs[pool].index >= 0 && prefs[pool].index < quotePools[pool].length)
+            && text(prefs[pool].id, 128) && text(prefs[pool].text, 200) && optionalText(prefs[pool].timerId, 128))
           || !Number.isInteger(prefs.suggestion) || prefs.suggestion < 0 || prefs.suggestion >= restSuggestions.length
           || typeof prefs.skipId !== "string") throw new Error("Invalid support preferences");
         supportStorageFailed = false;
+        // Old display preferences must not hide content after those controls were removed.
+        prefs.enabled = true;
+        prefs.hidden = [];
         return prefs;
       } catch (error) {
         supportStorageFailed = true;
@@ -489,35 +540,178 @@
       }
     }
     const supportPool = () => state.timer?.kind === "break" || state.breakPrompt ? "rest" : "focus";
-    function availableQuote(pool, start) {
-      const lines = quotePools[pool];
-      for (let offset = 0; offset < lines.length; offset++) {
-        const index = (start + offset) % lines.length;
-        if (!support.hidden.includes(`${pool}:${index}`)) return index;
-      }
-      return -1;
+    function availableQuote(pool, start = 0) {
+      const entries = poolMottos(pool);
+      return entries.length ? entries[((start % entries.length) + entries.length) % entries.length] : null;
     }
-    function renderSupport() {
+    function renderSupport(force = false) {
       const pool = supportPool();
       const selection = support[pool];
-      const frozen = state.timer && state.timer.kind !== "break";
-      if (!frozen && selection.window !== quoteWindow()) {
-        selection.window = quoteWindow();
-        selection.index = availableQuote(pool, selection.window % quotePools[pool].length);
-        if (selection.index < 0) selection.index = 0;
+      const focusTimer = state.timer && state.timer.kind !== "break" ? state.timer.id : "";
+      const frozen = !force && focusTimer && selection.timerId === focusTimer;
+      const entries = poolMottos(pool);
+      let entry = entries.find((entry) => entry.id === selection.id);
+      if (!frozen) {
+        if (selection.window !== quoteWindow()) entry = availableQuote(pool, quoteWindow());
+        else if (!entry) entry = availableQuote(pool);
+      }
+      const displayed = frozen ? selection.text : entry?.text || "";
+      if (!frozen && (selection.id !== (entry?.id || "") || selection.text !== displayed
+        || selection.window !== quoteWindow() || selection.timerId !== focusTimer)) {
+        Object.assign(selection, { window: quoteWindow(), id: entry?.id || "", text: displayed, timerId: focusTimer });
         saveSupport();
       }
-      const index = availableQuote(pool, selection.index);
-      $("quote-content").hidden = !support.enabled;
-      $("quote-toggle").textContent = support.enabled ? "关闭短句" : "显示短句";
-      $("support-quote").textContent = index < 0 ? "这些短句已全部隐藏，可在下方恢复。" : quotePools[pool][index];
-      $("quote-next").disabled = index < 0;
-      $("quote-hide").disabled = index < 0;
+      $("support-quote").textContent = displayed || "这里暂时没有格言。想写时，可以到格言设置添加。";
+      $("quote-next").disabled = !availableQuote(pool);
       const resting = state.timer?.kind === "break";
       $("rest-suggestion").hidden = !resting || support.skipId === state.timer.id;
       $("rest-suggestion-text").textContent = restSuggestions[support.suggestion];
     }
     saveSupport();
+    const EDITOR_PREFIX = STORAGE_KEY + "-motto-editor-";
+    let editorKey = "";
+    let editorItems = [];
+    let editorBase = [];
+    let editorDirty = false;
+    let settingsOpen = false;
+    let editorFailure = "";
+    function editorDraftKeys() {
+      return Object.keys(localStorage).filter((key) => key.startsWith(EDITOR_PREFIX)).sort();
+    }
+    function updateEditorStatus() {
+      $("motto-save-status").textContent = editorFailure || (editorDirty
+        ? "有未保存修改。编辑草稿保留在本机，请保存以同步。"
+        : cloudFailure ? "句库尚未确认同步，请使用上方恢复选项；云端草稿仍保留。"
+          : CLOUD && !cloudReady ? "正在连接云端，暂时不能保存。"
+          : CLOUD && (cloudBusy || cloudPending || cloudFlight) ? "句库保存中…"
+            : CLOUD ? "句库已同步。" : "句库已保存在本浏览器。");
+      $("motto-save-status").classList.toggle("error", Boolean(editorFailure || cloudFailure));
+      $("motto-save").disabled = CLOUD && (!cloudReady || (Boolean(cloudFailure) && !cloudRejected));
+      try {
+        const keys = editorDraftKeys();
+        const selected = $("motto-draft-select").value;
+        $("motto-draft-select").replaceChildren(...keys.map((key, i) => new Option(`编辑草稿 ${i + 1} · ${key.slice(-8)}`, key)));
+        if (keys.includes(selected)) $("motto-draft-select").value = selected;
+        $("motto-drafts").hidden = keys.length === 0;
+      } catch (error) {
+        console.error("Unable to list motto editor drafts", error);
+        $("motto-save-status").textContent = "无法读取格言草稿列表，请检查浏览器存储。";
+      }
+    }
+    function preserveEditor() {
+      editorDirty = true;
+      editorFailure = "";
+      try {
+        if (!editorKey) editorKey = EDITOR_PREFIX + uid();
+        localStorage.setItem(editorKey, JSON.stringify({ base: editorBase, items: editorItems }));
+      } catch (error) {
+        console.error("Unable to preserve motto inputs", error);
+        editorFailure = "格言输入仅在本页，草稿保存失败。请导出编辑草稿，不要关闭页面。";
+      }
+      updateEditorStatus();
+    }
+    function removeEditorDraft() {
+      if (editorKey) {
+        try {
+          localStorage.removeItem(editorKey);
+        } catch (error) {
+          console.error("Unable to remove motto editor draft", error);
+          notify("句库已处理，但编辑草稿未能清理，下次可能再次显示。", true);
+        }
+      }
+      editorKey = "";
+    }
+    function loadEditorDraft(key) {
+      try {
+        const draft = JSON.parse(localStorage.getItem(key));
+        if (!draft || !validMottos(draft.base) || !Array.isArray(draft.items) || draft.items.length > 200
+          || !draft.items.every((entry) => entry && text(entry.id, 128) && entry.id
+            && ["focus", "rest"].includes(entry.pool) && text(entry.text, 200))) throw new Error("Invalid editor draft");
+        editorBase = draft.base;
+        editorItems = draft.items;
+        // Claim a new key when this page edits a recovered snapshot.
+        editorKey = "";
+        editorDirty = true;
+        editorFailure = "已打开编辑草稿，尚未保存。原草稿保留，可在保存后明确丢弃。";
+        renderMottoEditor();
+      } catch (error) {
+        console.error("Unable to open motto editor draft", error);
+        editorFailure = "无法读取所选编辑草稿，原始数据仍保留。";
+        updateEditorStatus();
+      }
+    }
+    function resetMottoEditor() {
+      editorBase = structuredClone(mottos());
+      editorItems = structuredClone(editorBase);
+      editorDirty = false;
+      editorFailure = "";
+      renderMottoEditor();
+    }
+    function renderMottoEditor() {
+      $("motto-list").replaceChildren();
+      for (const entry of editorItems) {
+        const li = document.createElement("li");
+        li.className = "motto-item";
+        li.dataset.mottoId = entry.id;
+        const label = document.createElement("label");
+        label.className = "notes-field";
+        const origin = document.createElement("span");
+        origin.textContent = mottoOrigin(entry);
+        const input = document.createElement("textarea");
+        input.className = "notes-input";
+        input.maxLength = 200;
+        input.value = entry.text;
+        input.setAttribute("aria-label", "格言文字");
+        input.addEventListener("input", () => {
+          entry.text = input.value;
+          origin.textContent = mottoOrigin(entry);
+          preserveEditor();
+        });
+        label.append(origin, input);
+        const pool = document.createElement("select");
+        pool.setAttribute("aria-label", "格言使用场景");
+        pool.append(new Option("普通鼓励", "focus"), new Option("休息", "rest"));
+        pool.value = entry.pool;
+        pool.addEventListener("change", () => {
+          entry.pool = pool.value;
+          origin.textContent = mottoOrigin(entry);
+          preserveEditor();
+        });
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "删除";
+        remove.addEventListener("click", () => {
+          if (!confirm("删除这条格言？保存后生效；不会自动恢复。")) return;
+          editorItems = editorItems.filter((item) => item.id !== entry.id);
+          preserveEditor();
+          renderMottoEditor();
+        });
+        const actions = document.createElement("div");
+        actions.className = "quiet-actions";
+        actions.append(pool, remove);
+        li.append(label, actions);
+        $("motto-list").append(li);
+      }
+      $("motto-empty").hidden = editorItems.length !== 0;
+      updateEditorStatus();
+    }
+    function openMottoSettings() {
+      settingsOpen = true;
+      $("home-view").hidden = true;
+      $("settings-view").hidden = false;
+      if (!editorDirty) {
+        resetMottoEditor();
+        try {
+          const keys = editorDraftKeys();
+          if (keys.length) loadEditorDraft(keys[0]);
+        } catch (error) {
+          console.error("Unable to recover motto inputs", error);
+          editorFailure = "无法读取格言草稿，请检查浏览器存储。";
+        }
+      }
+      updateEditorStatus();
+      $("settings-heading").focus();
+    }
     function cacheState() {
       try {
         if (storageFailed) {
@@ -564,6 +758,7 @@
           void flushCloud();
         }
       }
+      if (settingsOpen) updateEditorStatus();
       return true;
     }
     function preserveDraft() {
@@ -659,6 +854,7 @@
       $("cloud-reload").disabled = cloudBusy || cloudReading;
       $("storage-caption").textContent = "私人云端空间 · 多设备同步";
       updateDraftOptions();
+      if (settingsOpen) updateEditorStatus();
     }
     async function cloudRequest(path, options = {}) {
       const sentAt = Date.now();
@@ -1215,6 +1411,7 @@
       $("task-panel").hidden = free;
       $("focus-label").value = state.label;
       renderTimer();
+      if (settingsOpen && !editorDirty) resetMottoEditor();
     }
     function startTimer(taskId, stepId = "") {
       if (state.timer) {
@@ -1398,34 +1595,83 @@
       });
     }
     $("next-focus").addEventListener("click", () => startTimer());
+    $("motto-settings-open").addEventListener("click", openMottoSettings);
+    $("settings-back").addEventListener("click", () => {
+      settingsOpen = false;
+      $("settings-view").hidden = true;
+      $("home-view").hidden = false;
+      if (editorDirty && !$("notice").classList.contains("error")) notify("格言编辑尚未保存，返回设置可继续；保存后才会同步。", true);
+      $("motto-settings-open").focus();
+    });
+    $("motto-add").addEventListener("click", () => {
+      if (editorItems.length >= 200) {
+        editorFailure = "最多 200 条格言，请先删除不需要的条目。";
+        updateEditorStatus();
+        return;
+      }
+      editorItems.push({ id: uid(), pool: "focus", text: "" });
+      preserveEditor();
+      renderMottoEditor();
+      $("motto-list").querySelectorAll("textarea")[$("motto-list").querySelectorAll("textarea").length - 1].focus();
+    });
+    $("motto-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!sameState(mottos(), editorBase)) {
+        editorFailure = "句库已在其他页面或设备变更，未覆盖。请先导出编辑草稿，再加载当前句库并重新修改。";
+        updateEditorStatus();
+        return;
+      }
+      if (!edit((next) => { next.mottos = structuredClone(editorItems); })) {
+        editorFailure = $("notice").textContent;
+        updateEditorStatus();
+        return;
+      }
+      editorBase = structuredClone(mottos());
+      // Keep the input snapshot if browser persistence failed; cloud drafts are handled by save().
+      if (storageFailed || $("notice").classList.contains("error")) {
+        editorFailure = $("notice").textContent;
+        updateEditorStatus();
+      } else {
+        removeEditorDraft();
+        editorDirty = false;
+        editorFailure = "";
+      }
+      renderSupport(true);
+      updateEditorStatus();
+    });
+    $("motto-reset-editor").addEventListener("click", () => {
+      if (editorDirty && !confirm("放弃当前编辑并加载当前句库？可先导出编辑草稿。")) return;
+      removeEditorDraft();
+      resetMottoEditor();
+    });
+    $("motto-export-editor").addEventListener("click", () => {
+      downloadBackup(JSON.stringify({ ...state, mottos: editorItems }));
+    });
+    $("motto-draft-open").addEventListener("click", () => {
+      if (editorDirty) preserveEditor();
+      loadEditorDraft($("motto-draft-select").value);
+    });
+    $("motto-draft-discard").addEventListener("click", () => {
+      const key = $("motto-draft-select").value;
+      if (!key.startsWith(EDITOR_PREFIX) || !confirm("永久丢弃所选格言编辑草稿？请先导出备份。")) return;
+      try {
+        localStorage.removeItem(key);
+        if (key === editorKey) editorKey = "";
+      } catch (error) {
+        console.error("Unable to discard motto editor draft", error);
+        editorFailure = "无法丢弃所选草稿，原始内容仍保留。";
+      }
+      updateEditorStatus();
+    });
     $("quote-next").addEventListener("click", () => {
       const pool = supportPool();
-      const index = availableQuote(pool, support[pool].index);
-      if (index < 0) return;
-      support[pool] = { window: quoteWindow(), index: availableQuote(pool, index + 1) };
+      const entries = poolMottos(pool);
+      const index = entries.findIndex((entry) => entry.id === support[pool].id);
+      const entry = availableQuote(pool, index + 1);
+      if (!entry) return;
+      support[pool] = { window: quoteWindow(), id: entry.id, text: entry.text };
       saveSupport();
-      renderSupport();
-    });
-    $("quote-hide").addEventListener("click", () => {
-      const pool = supportPool();
-      const index = availableQuote(pool, support[pool].index);
-      if (index < 0) return;
-      support.hidden.push(`${pool}:${index}`);
-      support[pool].window = quoteWindow();
-      support[pool].index = availableQuote(pool, index + 1);
-      if (support[pool].index < 0) support[pool].index = 0;
-      saveSupport();
-      renderSupport();
-    });
-    $("quote-toggle").addEventListener("click", () => {
-      support.enabled = !support.enabled;
-      saveSupport();
-      renderSupport();
-    });
-    $("quote-restore").addEventListener("click", () => {
-      support.hidden = [];
-      saveSupport();
-      renderSupport();
+      renderSupport(true);
     });
     $("suggestion-next").addEventListener("click", () => {
       support.suggestion = (support.suggestion + 1) % restSuggestions.length;
@@ -1439,8 +1685,11 @@
       renderSupport();
     });
     window.addEventListener("storage", (event) => {
+      if (settingsOpen && (event.key === null || event.key.startsWith(EDITOR_PREFIX))) updateEditorStatus();
       if (event.key === SUPPORT_KEY || event.key === null) {
+        const frozenSelection = state.timer && state.timer.kind !== "break" ? support.focus : null;
         support = loadSupport();
+        if (frozenSelection) support.focus = frozenSelection;
         renderSupport();
       }
       if (CLOUD && (event.key === null || event.key === DRAFT_KEY || event.key.startsWith(DRAFT_PREFIX))) {
@@ -1487,7 +1736,7 @@
         if (!validState(imported)) {
           throw new Error("备份格式无效，当前数据未更改。");
         }
-        if (!confirm("导入任务、步骤和历史？相同 ID 保留现有内容，不导入正在进行的计时。")) {
+        if (!confirm("导入任务、步骤和历史？相同 ID 保留现有内容，不导入正在进行的计时。有格言句库时可另行确认恢复。")) {
           return;
         }
         if (CLOUD && (!cloudReady || (cloudFailure && !cloudRejected))) {
@@ -1522,6 +1771,9 @@
             next.history.push(entry);
             history.add(entry.id);
           }
+        }
+        if (imported.mottos !== undefined && confirm("同时用备份中的格言句库替换当前句库（包括删除记录和空句库）？取消则只导入任务与历史。")) {
+          next.mottos = imported.mottos;
         }
         if (!save(next)) return;
         render();
@@ -1628,6 +1880,12 @@
         void refreshCloud();
       }
       tick();
+    });
+    window.addEventListener("beforeunload", (event) => {
+      if (editorDirty) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
     });
     $("today").textContent = new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" });
     render();

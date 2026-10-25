@@ -74,12 +74,49 @@ dates and notes are preserved in storage, sync, and backups but are not displaye
 
 ## Quiet encouragement and optional breaks
 
-Edit **`support-content.js`** to maintain all encouragement lines, rest
-suggestions, group labels, and source URLs. It is the sole content resource,
+Use **格言设置** (Motto settings) in the footer to add, edit, or delete ordinary
+and rest mottos, then choose **保存句库**. **返回首页** returns to the timer.
+The home quote area shows only the sentence and **换一句**; it has no hide,
+disable, source links, or explanatory panel. Delete unwanted lines in settings.
+Previous local hide/disable preferences are retired so they cannot conceal the
+new library. User library content is never reset by this preference migration.
+
+The library synchronizes with the sole account in cloud mode and saves in this
+browser in local mode. It uses the existing full-document revisions, owner
+authentication, CSRF checks, conflict handling, and recovery drafts, not a new
+public administration endpoint. Limits are 200 entries with 1–200 characters per
+entry and unique, stable IDs up to 128 characters. User text renders only as text.
+Default lines retain their original attribution only when text and scenario
+still match; changed lines are marked modified, and added lines custom in settings.
+
+Changes remain in the editor until saved. Unsaved input is preserved in independent
+`little-focus-v1-motto-editor-<UUID>` browser snapshots, including blank input
+that needs correction. Returning home keeps the editor and warns that it is
+unsaved; reload offers the saved editor drafts in settings. Recovered snapshots
+are retained separately and can be explicitly discarded after saving/exporting.
+Different tabs do not overwrite each other's input drafts. If the library
+changed while editing, save refuses to overwrite it: export the input, load the
+current library, and reapply the intended edits. Network failures use the regular
+cloud draft recovery. Storage failures remain visible and allow exporting the
+editor draft before closing. Only saved valid libraries sync.
+
+`mottos` is an optional array of `{ id, pool: "focus" | "rest", text }` in the
+state document. When absent, defaults are interpreted from **`support-content.js`**;
+opening settings does not write or migrate the cloud document. Explicit empty
+arrays stay empty, so deleting defaults does not revive them on refresh.
+JSON backups include an explicit saved library. Importing a backup with a
+library offers a separate confirmation to replace the library, including an
+empty one; old backups without the field never reset customized content.
+Timers and pending rest choices are not imported.
+
+`support-content.js` remains the sole source of default encouragement, rest
+suggestions, group labels, and source URLs. User edits do not modify this file.
+It is
 loaded as a classic script before the app, so `file://` needs neither fetch nor
 ES modules. Keep the three groups of six lines, six rest lines, and three
-suggestions in their current order: hidden preferences use pool/index keys.
-Changing existing positions would change which sentence a saved hidden key means.
+suggestions in their current order: default entry IDs and legacy selection
+migration use those original positions. Settings edits/deletions retain IDs and
+do not shift another entry's selection.
 Missing or malformed content stops initialization with a visible error before
 task storage is read or changed; there is no empty-content fallback.
 
@@ -90,7 +127,7 @@ the resource; deploy/restart the server after editing it. The resource is truste
 application JavaScript, so edit text/data only, not code copied from untrusted
 sources.
 
-The timer has a small, static Chinese encouragement area: 18 original
+The timer has a small Chinese encouragement area, initially containing 18 original
 paraphrases grouped by Atomic Habits, CPT, and ACT, plus a separate six-line
 rest pool. These are not quotations from the books or therapy manuals.
 No AI, external content requests, scrolling, flashing, sounds, or notification
@@ -98,14 +135,15 @@ permissions are used.
 
 Automatic selection changes at fixed 12-hour UTC windows (00:00 and 12:00 UTC).
 Refreshes retain the selection. While a focus timer exists, including while
-paused, automatic changes wait until it ends. **换一句** changes the current
-line, **不再显示这句** hides it, and **关闭短句** switches the area off.
-You can re-enable it or restore hidden lines in the expandable explanation.
-Manual choices last for the current window; hidden lines and opt-out persist.
-All these preferences are browser-local in `little-focus-v1-support`, shared
-by same-origin tabs but not cloud-synced or exported in task backups. Rotation
-never writes the cloud task document. Storage errors appear separately from
-data-save warnings.
+paused, automatic changes wait until it ends. Background library updates also
+retain the current focus sentence until that timer ends; deliberate local
+edits and **换一句** may apply immediately. An empty pool shows an invitation
+to add content rather than silently restoring deleted lines.
+Manual selection lasts for the current window and uses stable entry IDs.
+Selection and rest-suggestion preferences remain browser-local in
+`little-focus-v1-support`, shared by same-origin tabs but not account-synced or
+exported in task backups. Rotation never writes the cloud task document.
+Storage errors appear separately from data-save warnings.
 
 After a focus timer finishes, choose **休息 5 分钟** or **稍后休息**.
 Nothing automatically starts a break or the next focus. A break can be paused,
@@ -131,10 +169,10 @@ require recovery rather than silent merging.
 Legacy timers without `kind` remain focus timers. New timers distinguish
 `kind: "focus"` and `kind: "break"` (five minutes); an optional `breakPrompt`
 records `offer` or `finished` only when no timer is active. JSON exports retain
-these fields, but importing merges tasks/history only, never active timers or
-rest choices. Reload old open pages after updating to understand break timers.
+these fields, but importing never activates timers or rest choices.
+Reload old open pages after updating to understand the new state fields.
 
-The expandable explanation links to
+Default source references (not original quotations):
 [Atomic Habits](https://jamesclear.com/atomic-habits),
 [CPT](https://www.ptsd.va.gov/understand_tx/cognitive_processing.asp), and
 [ACT](https://contextualscience.org/six_core_processes_act).

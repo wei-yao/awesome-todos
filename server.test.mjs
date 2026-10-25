@@ -446,6 +446,32 @@ test("Railway OIDC, owner-only access, CSRF, persistence, conflicts and logout",
         }
       }
     });
+    await t.test("account motto libraries persist, reject invalid input and conflicts, and preserve empty deletion", async () =>
+    {
+      const value = { ...state(), mottos: [{ id: "mine", pool: "focus", text: "<b>Pure text</b>" },
+        { id: "rest", pool: "rest", text: "Take a pause" }] };
+      const before = await store.read();
+      const body = { revision: before.revision, mutationId: randomUUID(), state: value };
+      assert.equal((await post("/api/state", body, cookie)).status, 200);
+      const loaded = await (await request("/api/state", { headers: { Cookie: cookie } })).json();
+      assert.deepEqual(loaded.state.mottos, value.mottos);
+      for (const mottos of [null, [null], [value.mottos[0], value.mottos[0]],
+        [{ id: "", pool: "focus", text: "Hi" }], [{ id: "a", pool: "bad", text: "Hi" }],
+        [{ id: "a", pool: "focus", text: " " }], [{ id: "a", pool: "focus", text: "x".repeat(201) }],
+        [{ id: "a", pool: "focus", text: "Fine", source: "CPT" }],
+        Array.from({ length: 201 }, (_, i) => ({ id: String(i), pool: "rest", text: "Hi" }))])
+      {
+        assert.equal((await post("/api/state", {
+          revision: loaded.revision, mutationId: randomUUID(), state: { ...value, mottos }
+        }, cookie)).status, 400);
+        assert.deepEqual((await store.read()).state.mottos, value.mottos);
+      }
+      assert.equal((await post("/api/state", { ...body, mutationId: randomUUID(), state: { ...value, mottos: [] } }, cookie)).status, 409);
+      assert.equal((await post("/api/state", {
+        revision: loaded.revision, mutationId: randomUUID(), state: { ...value, mottos: [] }
+      }, cookie)).status, 200);
+      assert.deepEqual((await store.read()).state.mottos, []);
+    });
     await t.test("request size includes the entire UTF-8 envelope at the exact 2 MiB boundary", async () =>
     {
       const before = await store.read();

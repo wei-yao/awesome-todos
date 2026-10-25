@@ -211,8 +211,9 @@ test("classic local resource loads before the app and is the sole source for quo
   assert.equal(page.run("restSuggestions === supportContent.suggestions"), true);
   for (const line of [...content.groups.flatMap((group) => group.lines), ...content.rest, ...content.suggestions])
     assert.equal(html.includes(line), false, `Duplicated resource text: ${line}`);
-  const links = page.elements.get("support-sources").querySelectorAll("a");
-  assert.deepEqual(links.map((link) => link.href), Array.from(content.groups, (group) => group.url));
+  assert.ok(content.groups.every((group) => group.url.startsWith("https://")));
+  for (const removed of ["quote-hide", "quote-toggle", "quote-restore", "support-sources"])
+    assert.equal(page.elements.has(removed), false);
 });
 
 test("missing and malformed resources stop before touching saved task data and show a clear error", () =>
@@ -238,6 +239,300 @@ test("missing and malformed resources stop before touching saved task data and s
     assert.equal(tasks.inert, true);
     assert.equal(focus.inert, true);
   }
+});
+
+test("motto settings provide real add/edit/delete/save/navigation with stable IDs and safe text rendering", async () =>
+{
+  const page = await browser();
+  const initial = page.get();
+  await page.emit("motto-settings-open");
+  assert.equal(page.elements.get("settings-view").hidden, false);
+  assert.equal(page.elements.get("home-view").hidden, true);
+  assert.equal(page.elements.get("motto-list").children.length, 24);
+  const originalId = page.run("editorItems[0].id");
+  const input = page.elements.get("motto-list").querySelector("textarea");
+  input.value = "<img src=x onerror=alert(1)>";
+  await input.emit("input");
+  assert.match(page.elements.get("motto-list").querySelector("span").textContent, /已修改/);
+  await page.emit("motto-add");
+  const row = page.elements.get("motto-list").children.at(-1);
+  const addedId = row.dataset.mottoId;
+  row.querySelector("textarea").value = "自定义休息";
+  await row.querySelector("textarea").emit("input");
+  row.querySelector("select").value = "rest";
+  await row.querySelector("select").emit("change");
+  await page.elements.get("motto-list").children[1].querySelector("button").click();
+  assert.deepEqual(page.get(), initial);
+  await page.emit("motto-form", "submit");
+  assert.equal(page.get().mottos.length, 24);
+  assert.equal(page.get().mottos[0].id, originalId);
+  assert.equal(page.get().mottos[0].text, input.value);
+  assert.equal(page.get().mottos.at(-1).id, addedId);
+  assert.equal(page.get().mottos.at(-1).pool, "rest");
+  assert.match(page.elements.get("motto-save-status").textContent, /已保存/);
+  page.run('support.focus.id = editorItems[0].id; support.focus.window = quoteWindow(); renderSupport(true)');
+  assert.equal(page.elements.get("support-quote").textContent, input.value);
+  assert.equal(page.elements.get("support-quote").children.length, 0);
+  assert.match(page.run("mottoOrigin(state.mottos[0])"), /已修改/);
+  await page.emit("settings-back");
+  assert.equal(page.elements.get("home-view").hidden, false);
+  const reopened = await browser({ local: page.local });
+  assert.deepEqual(reopened.get().mottos, page.get().mottos);
+  await reopened.emit("motto-settings-open");
+  assert.equal(reopened.elements.get("motto-list").querySelector("textarea").value, input.value);
+});
+
+test("deleted defaults and empty libraries remain empty through refresh, import and dynamic rotation", async () =>
+{
+  const page = await browser();
+  await page.emit("motto-settings-open");
+  for (let i = 0; i < 24; i++) await page.elements.get("motto-list").querySelector("button").click();
+  assert.equal(page.elements.get("motto-empty").hidden, false);
+  await page.emit("motto-form", "submit");
+  assert.deepEqual(page.get().mottos, []);
+  assert.match(page.elements.get("support-quote").textContent, /暂时没有格言/);
+  assert.equal(page.elements.get("quote-next").disabled, true);
+  const reopened = await browser({ local: page.local });
+  assert.deepEqual(reopened.get().mottos, []);
+  await reopened.import(state());
+  assert.deepEqual(reopened.get().mottos, []);
+  reopened.run("startBreak()");
+  assert.match(reopened.elements.get("support-quote").textContent, /暂时没有格言/);
+  await reopened.emit("motto-settings-open");
+  await reopened.emit("motto-add");
+  const textarea = reopened.elements.get("motto-list").querySelector("textarea");
+  textarea.value = "只有这一句";
+  await textarea.emit("input");
+  await reopened.emit("motto-form", "submit");
+  reopened.run("finishTimer(false); renderSupport(true)");
+  assert.equal(reopened.elements.get("support-quote").textContent, "只有这一句");
+  await reopened.emit("quote-next");
+  assert.equal(reopened.elements.get("support-quote").textContent, "只有这一句");
+});
+
+test("legacy selections migrate to stable IDs while obsolete hidden and disabled preferences cannot conceal quotes", async () =>
+{
+  const local = storage();
+  const window = Math.floor(Date.now() / 43200000);
+  local.setItem(STORAGE + "-support", JSON.stringify({
+    enabled: false, hidden: ["focus:1", "rest:2"], focus: { window, index: 0 },
+    rest: { window, index: 0 }, suggestion: 0, skipId: ""
+  }));
+  const page = await browser({ local });
+  assert.equal(page.run("support.version"), 2);
+  assert.deepEqual(clone(page.run("support.hidden")), []);
+  assert.equal(page.run("support.enabled"), true);
+  assert.equal(page.elements.get("quote-content").hidden, false);
+  assert.equal(page.run("support.focus.id"), "default-focus-0");
+  assert.equal(page.get().mottos, undefined);
+  await page.emit("motto-settings-open");
+  page.run('editorItems = editorItems.slice(1).reverse(); editorItems.find(e => e.id === "default-focus-1").text = "changed hidden"; preserveEditor()');
+  await page.emit("motto-form", "submit");
+  assert.equal(page.run('availableQuote("focus", poolMottos("focus").findIndex(e => e.id === "default-focus-1")).id'), "default-focus-1");
+  const reopened = await browser({ local });
+  assert.equal(reopened.get().mottos.find(entry => entry.id === "default-focus-1").text, "changed hidden");
+  assert.deepEqual(clone(reopened.run("support.hidden")), []);
+});
+
+test("unsaved motto inputs survive navigation, reload and validation errors without changing the saved library", async () =>
+{
+  const page = await browser();
+  await page.emit("motto-settings-open");
+  const input = page.elements.get("motto-list").querySelector("textarea");
+  input.value = "";
+  await input.emit("input");
+  const draftKey = Object.keys(page.local).find(key => key.startsWith(STORAGE + "-motto-editor-"));
+  assert.ok(draftKey);
+  await page.emit("settings-back");
+  await page.emit("motto-settings-open");
+  assert.equal(page.elements.get("motto-list").querySelector("textarea").value, "");
+  await page.emit("motto-form", "submit");
+  assert.match(page.elements.get("motto-save-status").textContent, /格式无效/);
+  assert.equal(page.get().mottos, undefined);
+  const reopened = await browser({ local: page.local });
+  await reopened.emit("motto-settings-open");
+  assert.equal(reopened.elements.get("motto-list").querySelector("textarea").value, "");
+  assert.equal(reopened.run("editorDirty"), true);
+  await reopened.emit("motto-export-editor");
+  assert.equal(JSON.parse(await reopened.downloads[0].text()).mottos[0].text, "");
+  page.context.confirm = () => false;
+  const count = page.run("editorItems.length");
+  await page.elements.get("motto-list").querySelector("button").click();
+  assert.equal(page.run("editorItems.length"), count);
+});
+
+test("independent unsaved motto snapshots cannot erase one another across tabs", async () =>
+{
+  const local = storage();
+  const a = await browser({ local });
+  const b = await browser({ local });
+  for (const [page, value] of [[a, "A input"], [b, "B input"]])
+  {
+    await page.emit("motto-settings-open");
+    const input = page.elements.get("motto-list").querySelector("textarea");
+    input.value = value;
+    await input.emit("input");
+  }
+  // B recovered A's initial draft, then claimed an independent snapshot.
+  const keys = Object.keys(local).filter(key => key.startsWith(STORAGE + "-motto-editor-"));
+  assert.equal(keys.length, 2);
+  await b.emit("motto-form", "submit");
+  assert.ok(keys.some(key => local.getItem(key)?.includes("A input")));
+  a.storageEvent(STORAGE);
+  await a.emit("motto-form", "submit");
+  assert.match(a.elements.get("motto-save-status").textContent, /其他页面或设备变更/);
+  assert.equal(a.run("editorItems[0].text"), "A input");
+});
+
+test("motto library is account-synced; background changes do not interrupt a focus snapshot", async () =>
+{
+  const now = 1800000000000;
+  const server = remote();
+  const a = await browser({ now, cloud: true, fetch: server.fetch });
+  const b = await browser({ now, cloud: true, fetch: server.fetch });
+  await a.emit("motto-settings-open");
+  a.run('editorItems = [{ id: "custom", pool: "focus", text: "First" }]; preserveEditor()');
+  await a.emit("motto-form", "submit");
+  await a.settle();
+  await b.run("refreshCloud()");
+  await b.emit("start");
+  await b.settle();
+  assert.equal(b.elements.get("support-quote").textContent, "First");
+  const focusedReload = await browser({ now, cloud: true, fetch: server.fetch });
+  assert.equal(focusedReload.elements.get("support-quote").textContent, "First");
+  await a.run("refreshCloud()");
+  a.run('editorDirty = false; resetMottoEditor(); editorItems[0].text = "Remote edited"; preserveEditor()');
+  await a.emit("motto-form", "submit");
+  await a.settle();
+  await b.run("refreshCloud()");
+  assert.equal(b.get().mottos[0].text, "Remote edited");
+  assert.equal(b.elements.get("support-quote").textContent, "First");
+  await b.emit("finish");
+  await b.settle();
+  assert.equal(b.elements.get("support-quote").textContent, "Remote edited");
+  assert.match(b.run("mottoOrigin(state.mottos[0])"), /自定义/);
+});
+
+test("motto saves preserve network-failure drafts and refuse stale concurrent account overwrites", async () =>
+{
+  for (const offline of [false, true])
+  {
+    const server = remote();
+    const a = await browser({ cloud: true, fetch: server.fetch });
+    const b = await browser({ cloud: true, fetch: async (url, options) =>
+    {
+      if (offline && options?.method === "POST") throw new Error("offline");
+      return server.fetch(url, options);
+    } });
+    await a.emit("motto-settings-open");
+    await b.emit("motto-settings-open");
+    a.run('editorItems = [{ id: "a", pool: "focus", text: "Remote" }]; preserveEditor()');
+    await a.emit("motto-form", "submit");
+    await a.settle();
+    b.run('editorItems = [{ id: "b", pool: "rest", text: "Keep local" }]; preserveEditor()');
+    await b.emit("motto-form", "submit");
+    await b.settle();
+    assert.ok(b.run("cloudFailure"));
+    assert.equal(b.get().mottos[0].text, "Keep local");
+    assert.equal(server.snapshot().state.mottos[0].text, "Remote");
+    assert.ok(Object.keys(b.local).some(key => key.startsWith(PREFIX)));
+    assert.match(b.elements.get("motto-save-status").textContent, /未确认同步/);
+    const reopened = await browser({ local: b.local, cloud: true, fetch: server.fetch });
+    assert.equal(reopened.get().mottos[0].text, "Keep local");
+  }
+});
+
+test("motto validation agrees across client/server on exact limits and all edits remain atomic", async () =>
+{
+  const page = await browser();
+  const entry = { id: "custom", pool: "focus", text: "Motto" };
+  const check = (items, expected) =>
+  {
+    const candidate = { ...state(), mottos: items };
+    page.value("candidate", candidate);
+    assert.equal(page.run("validState(candidate)"), expected);
+    assert.equal(serverValidState(candidate), expected);
+  };
+  check(undefined, true);
+  check([], true);
+  check(Array.from({ length: 200 }, (_, i) => ({ ...entry, id: String(i) })), true);
+  check(Array.from({ length: 201 }, (_, i) => ({ ...entry, id: String(i) })), false);
+  check([{ ...entry, id: "x".repeat(128), text: "中".repeat(200) }], true);
+  for (const items of [null, {}, [null], [entry, entry], [{ ...entry, id: "" }],
+    [{ ...entry, id: "x".repeat(129) }], [{ ...entry, text: "x".repeat(201) }],
+    [{ ...entry, text: " " }], [{ ...entry, pool: "script" }], [{ ...entry, source: "ACT" }]])
+    check(items, false);
+  const saved = page.get();
+  assert.equal(page.run("edit(next => { next.mottos = [{id:'bad', pool:'rest', text:''}] })"), false);
+  assert.deepEqual(page.get(), saved);
+});
+
+test("motto backup restores are explicit, including empty libraries; old backups never reset customized content", async () =>
+{
+  const initial = { ...state(), mottos: [{ id: "mine", pool: "focus", text: "Mine" }] };
+  const page = await browser({ initial });
+  await page.import(state());
+  assert.deepEqual(page.get().mottos, initial.mottos);
+  let confirmations = 0;
+  page.context.confirm = () => ++confirmations === 1;
+  await page.import({ ...state(), mottos: [] });
+  assert.deepEqual(page.get().mottos, initial.mottos);
+  page.context.confirm = () => true;
+  await page.emit("export-backup");
+  const backup = JSON.parse(await page.downloads[0].text());
+  const restored = await browser();
+  await restored.import(backup);
+  assert.deepEqual(restored.get().mottos, initial.mottos);
+  await restored.import({ ...state(), mottos: [] });
+  assert.deepEqual(restored.get().mottos, []);
+  const before = restored.get();
+  await restored.import({ ...state(), mottos: [{ id: "bad", pool: "focus", text: "" }] });
+  assert.deepEqual(restored.get(), before);
+});
+
+test("dynamic pool rotation respects precise windows and cross-tab preferences cannot interrupt focus", async () =>
+{
+  const window = 43200000;
+  const now = window * 40000 + window - 1;
+  const initial = { ...state(), mottos: [
+    { id: "a", pool: "focus", text: "Alpha" },
+    { id: "b", pool: "focus", text: "Beta" },
+    { id: "r", pool: "rest", text: "Rest" }
+  ] };
+  const local = storage();
+  const page = await browser({ now, local, initial });
+  const first = page.elements.get("support-quote").textContent;
+  page.setNow(now + 1);
+  page.run("tick()");
+  assert.notEqual(page.elements.get("support-quote").textContent, first);
+  await page.emit("start");
+  const focused = page.elements.get("support-quote").textContent;
+  const b = await browser({ now: now + 1, local });
+  await b.emit("quote-next");
+  page.storageEvent(STORAGE + "-support");
+  assert.equal(page.elements.get("support-quote").textContent, focused);
+  await page.emit("start");
+  page.setNow(now + window);
+  page.run("tick()");
+  assert.equal(page.elements.get("support-quote").textContent, focused);
+});
+
+test("motto input quota failures stay visible, exports work, and abandoning input requires confirmation", async () =>
+{
+  const page = await browser();
+  await page.emit("motto-settings-open");
+  page.context.localStorage = new Proxy(page.local, {
+    get(target, key) { return key === "setItem" ? () => { throw new Error("quota"); } : target[key]; }
+  });
+  const input = page.elements.get("motto-list").querySelector("textarea");
+  input.value = "Don't lose me";
+  await input.emit("input");
+  assert.match(page.elements.get("motto-save-status").textContent, /不要关闭页面/);
+  page.context.confirm = () => false;
+  await page.emit("motto-reset-editor");
+  assert.equal(page.run("editorItems[0].text"), "Don't lose me");
+  await page.emit("motto-export-editor");
+  assert.equal(JSON.parse(await page.downloads[0].text()).mottos[0].text, "Don't lose me");
 });
 
 test("task views filter parents without changing stored data or triggering cloud saves", async () =>
@@ -476,22 +771,12 @@ test("quotes switch at the exact 12-hour boundary, stay stable on refresh, and n
   assert.equal(server.requests.length, 0);
 });
 
-test("hidden quotes and opt-out persist, all-hidden pools stay quiet, and focus defers automatic rotation", async () =>
+test("focus and pause defer automatic rotation while manual change remains available", async () =>
 {
   const window = 43200000;
   const now = window * 40000 + window - 1;
   const page = await browser({ now });
   const quote = () => page.elements.get("support-quote").textContent;
-  const first = quote();
-  await page.emit("quote-hide");
-  assert.notEqual(quote(), first);
-  const hidden = page.run("support.hidden[0]");
-  await page.emit("quote-toggle");
-  assert.equal(page.elements.get("quote-content").hidden, true);
-  const reopened = await browser({ now, local: page.local });
-  assert.equal(reopened.elements.get("quote-content").hidden, true);
-  assert.equal(reopened.run("support.hidden[0]"), hidden);
-  await page.emit("quote-toggle");
   const selected = quote();
   await page.emit("start");
   await page.emit("start");
@@ -502,19 +787,15 @@ test("hidden quotes and opt-out persist, all-hidden pools stay quiet, and focus 
   assert.equal(focusedReload.elements.get("support-quote").textContent, selected);
   await page.emit("finish");
   assert.equal(page.run("support.focus.window"), 40001);
-  assert.notEqual(quote(), first);
-  for (let i = 0; i < 18; i++) await page.emit("quote-hide");
-  assert.equal(page.elements.get("quote-next").disabled, true);
-  assert.match(quote(), /全部隐藏/);
-  const allHiddenReload = await browser({ now: now + 2, local: page.local });
-  assert.equal(allHiddenReload.elements.get("quote-hide").disabled, true);
-  await page.emit("quote-restore");
-  assert.equal(page.elements.get("quote-hide").disabled, false);
+  assert.notEqual(quote(), selected);
+  await page.emit("start");
+  const frozen = quote();
+  await page.emit("quote-next");
+  assert.notEqual(quote(), frozen);
+  await page.emit("finish");
   page.run("startBreak()");
   const restQuote = page.elements.get("support-quote").textContent;
-  for (let i = 0; i < 6; i++) await page.emit("quote-hide");
-  assert.equal(page.elements.get("quote-hide").disabled, true);
-  await page.emit("quote-restore");
+  await page.emit("quote-next");
   assert.notEqual(page.elements.get("support-quote").textContent, "");
   assert.ok(page.run("quotePools.rest").includes(restQuote));
 });
@@ -672,9 +953,9 @@ test("shared local tabs see break pause, completion and quote preferences withou
   await a.emit("start");
   b.storageEvent(STORAGE);
   assert.equal(b.get().timer.status, "paused");
-  await a.emit("quote-toggle");
+  await a.emit("quote-next");
   b.storageEvent(STORAGE + "-support");
-  assert.equal(b.elements.get("quote-content").hidden, true);
+  assert.equal(b.elements.get("support-quote").textContent, a.elements.get("support-quote").textContent);
   await a.emit("start");
   b.storageEvent(STORAGE);
   a.setNow(now + 300000);
@@ -761,7 +1042,7 @@ test("support storage failures remain visible without obscuring task errors or r
   normal.context.localStorage = new Proxy(normal.local, {
     get(target, key) { return key === "setItem" ? () => { throw new Error("quota"); } : target[key]; }
   });
-  await normal.emit("quote-toggle");
+  await normal.emit("quote-next");
   assert.match(normal.elements.get("support-error").textContent, /仅在本页生效/);
 });
 
@@ -1149,6 +1430,12 @@ test("UTF-8 limit includes the full request envelope and reserves revision growt
   assert.ok(page.downloads[0].size <= MAX_BYTES);
   assert.deepEqual(JSON.parse(await page.downloads[0].text()), candidate);
   const before = page.get();
+  candidate.mottos = [{ id: "extra", pool: "focus", text: "A valid motto over the complete request limit" }];
+  page.value("candidate", candidate);
+  assert.match(page.run("stateError(candidate)"), /2 MiB/);
+  assert.equal(page.run("save(candidate)"), false);
+  assert.deepEqual(page.get(), before);
+  delete candidate.mottos;
   candidate.label = "x";
   page.value("candidate", candidate);
   assert.match(page.run("stateError(candidate)"), /2 MiB/);
