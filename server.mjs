@@ -136,6 +136,7 @@ export async function createApp({ store, origin, ownerId, oidc, logger = console
   const flowTTL = 10 * 60 * 1000;
   const rateWindow = 15 * 60 * 1000;
   const appPage = await readFile(new URL("./index.html", import.meta.url), "utf8");
+  const supportScript = await readFile(new URL("./support-content.js", import.meta.url), "utf8");
   function cookie(request, name)
   {
     return request.headers.cookie?.split(";").map((part) => part.trim()).find((part) => part.startsWith(name + "="))?.slice(name.length + 1);
@@ -216,6 +217,7 @@ export async function createApp({ store, origin, ownerId, oidc, logger = console
       else if (path === "/" && request.method === "GET")
       {
         const html = (session ? appPage.replace('"use strict";', '"use strict"; window.LITTLE_FOCUS_CLOUD = true;') : loginPage.replace("{{ERROR}}", ""))
+          .replace('<script src="./support-content.js"></script>', () => `<script>${supportScript.replaceAll("</script", "<\\/script")}</script>`)
           .replaceAll("<script>", `<script nonce="${nonce}">`).replaceAll("<style>", `<style nonce="${nonce}">`);
         response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
         response.end(html);

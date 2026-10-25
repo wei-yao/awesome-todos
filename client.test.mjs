@@ -8,6 +8,7 @@ import { validState as serverValidState } from "./server.mjs";
 
 const html = await readFile(new URL("./index.html", import.meta.url), "utf8");
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+const supportScript = await readFile(new URL("./support-content.js", import.meta.url), "utf8");
 const STORAGE = "little-focus-v1";
 const LEGACY = STORAGE + "-pending";
 const PREFIX = LEGACY + "-";
@@ -166,6 +167,7 @@ async function browser({ local = storage(), cloud = false, fetch = remote().fetc
     },
     setInterval() {}, setTimeout() {}
   });
+  runInContext(supportScript, context);
   runInContext(script, context);
   const run = (code) => runInContext(code, context);
   const settle = async () =>
@@ -194,6 +196,49 @@ async function browser({ local = storage(), cloud = false, fetch = remote().fetc
     quietRender: () => run("render = renderTimer = renderTasks = renderTaskOptions = renderHistory = renderTaskCount = () => {}")
   };
 }
+
+test("classic local resource loads before the app and is the sole source for quotes and metadata", async () =>
+{
+  assert.ok(html.indexOf('<script src="./support-content.js"></script>') < html.indexOf("<script>"));
+  const page = await browser();
+  const content = page.run("window.LITTLE_FOCUS_SUPPORT");
+  assert.deepEqual(Array.from(content.groups, (group) => group.source), ["Atomic Habits", "CPT", "ACT"]);
+  assert.deepEqual(Array.from(content.groups, (group) => group.lines.length), [6, 6, 6]);
+  assert.equal(content.rest.length, 6);
+  assert.equal(content.suggestions.length, 3);
+  assert.equal(page.run("quoteGroups === supportContent.groups"), true);
+  assert.equal(page.run("quotePools.rest === supportContent.rest"), true);
+  assert.equal(page.run("restSuggestions === supportContent.suggestions"), true);
+  for (const line of [...content.groups.flatMap((group) => group.lines), ...content.rest, ...content.suggestions])
+    assert.equal(html.includes(line), false, `Duplicated resource text: ${line}`);
+  const links = page.elements.get("support-sources").querySelectorAll("a");
+  assert.deepEqual(links.map((link) => link.href), Array.from(content.groups, (group) => group.url));
+});
+
+test("missing and malformed resources stop before touching saved task data and show a clear error", () =>
+{
+  for (const resource of [undefined, {}, { groups: [] }])
+  {
+    const notice = new Element();
+    const tasks = new Element();
+    const focus = new Element();
+    let touched = false;
+    const context = createContext({
+      window: { LITTLE_FOCUS_SUPPORT: resource },
+      document: {
+        getElementById: () => notice,
+        querySelector: (selector) => selector === ".tasks-card" ? tasks : focus
+      },
+      localStorage: new Proxy({}, { get() { touched = true; throw new Error("Unexpected storage access"); } })
+    });
+    assert.throws(() => runInContext(script, context), /Missing or invalid support-content/);
+    assert.equal(touched, false);
+    assert.equal(notice.hidden, false);
+    assert.match(notice.textContent, /support-content.js/);
+    assert.equal(tasks.inert, true);
+    assert.equal(focus.inert, true);
+  }
+});
 
 test("task views filter parents without changing stored data or triggering cloud saves", async () =>
 {

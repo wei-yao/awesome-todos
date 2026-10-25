@@ -267,7 +267,7 @@
           <summary>关于这些短句</summary>
           <p>原创提炼，非原著引语。普通短句参考习惯养成、认知加工疗法（CPT）与接纳承诺疗法（ACT），休息短句独立轮换。CPT 是认知行为治疗（CBT）的一种具体疗法，不是其别名。</p>
           <p>仅作一般性支持，不是 ADHD、PTSD 治疗或创伤处理练习。12 小时轮换和 5 分钟休息是产品默认值，不是临床处方。</p>
-          <p><a href="https://jamesclear.com/atomic-habits">Atomic Habits</a> · <a href="https://www.ptsd.va.gov/understand_tx/cognitive_processing.asp">CPT</a> · <a href="https://contextualscience.org/six_core_processes_act">ACT</a></p>
+          <p id="support-sources"></p>
           <div class="quiet-actions"><button id="quote-restore" type="button">恢复隐藏的短句</button></div>
         </details>
       </aside>
@@ -286,8 +286,25 @@
       </div>
     </footer>
   </main>
+  <script src="./support-content.js"></script>
   <script>
     "use strict";
+    const supportContent = window.LITTLE_FOCUS_SUPPORT;
+    const contentLines = (lines, count) => Array.isArray(lines) && lines.length === count
+      && lines.every((line) => typeof line === "string" && line.trim().length > 0);
+    if (!supportContent || !Array.isArray(supportContent.groups) || supportContent.groups.length !== 3
+      || !supportContent.groups.every((group) => group && typeof group.source === "string" && group.source.trim()
+        && typeof group.url === "string" && /^https:\/\/[^\s]+$/.test(group.url) && contentLines(group.lines, 6))
+      || !contentLines(supportContent.rest, 6) || !contentLines(supportContent.suggestions, 3)) {
+      const error = document.getElementById("notice");
+      error.textContent = "无法加载短句资源 support-content.js，或资源格式无效。请将完整资源与 index.html 放在同一目录后刷新；当前数据未更改。";
+      error.hidden = false;
+      error.classList.toggle("error", true);
+      document.querySelector(".tasks-card").inert = true;
+      document.querySelector(".focus-card").inert = true;
+      for (const id of ["import-backup", "clear-history"]) document.getElementById(id).disabled = true;
+      throw new Error("Missing or invalid support-content.js");
+    }
     const STORAGE_KEY = "little-focus-v1";
     const CLOUD = Boolean(window.LITTLE_FOCUS_CLOUD);
     const DRAFT_KEY = STORAGE_KEY + "-pending";
@@ -417,20 +434,21 @@
     let state = load();
     const SUPPORT_KEY = STORAGE_KEY + "-support";
     const QUOTE_WINDOW = 12 * 60 * 60 * 1000;
-    const quoteGroups = [
-      { source: "Atomic Habits", lines: ["先做两分钟，不必一次做完。", "让环境帮忙，少靠意志硬撑。", "把新习惯，接在熟悉的动作后。", "先重复，再慢慢优化。", "用小行动，练习想成为的自己。", "中断一次，不等于回到零。"] },
-      { source: "CPT", lines: ["自责，不是责任的证据。", "感受是真的，结论仍可核对。", "一次不顺，不是全部的你。", "用当时所知，理解当时的自己。", "“总是”和“永远”，也许有例外。", "换个角度，不是否认难处。"] },
-      { source: "ACT", lines: ["有这个念头，不必照着做。", "你不只是此刻的想法。", "注意力走远了，轻轻带回来。", "不必先有动力，才能迈一小步。", "朝在乎的方向，走一小步。", "接纳感受，不是放弃边界。"] }
-    ];
+    const quoteGroups = supportContent.groups;
     const quotePools = {
       focus: quoteGroups.flatMap((group) => group.lines),
-      rest: ["休息，不需要先挣到。", "口渴的话，喝几口水。", "松松肩膀，让眼睛看看远处。", "这一分钟，不需要解决什么。", "不用清空思绪，只需停留片刻。", "还没恢复，可以再歇一会儿。"]
+      rest: supportContent.rest
     };
-    const restSuggestions = [
-      "口渴的话，喝几口水。",
-      "在舒服的范围内动一动，或让眼睛看看远处。",
-      "可试着静心 1 分钟：感受脚底，看看周围。自然呼吸，可以睁眼，不必清空思绪。"
-    ];
+    const restSuggestions = supportContent.suggestions;
+    for (const group of quoteGroups) {
+      const link = document.createElement("a");
+      link.href = group.url;
+      link.textContent = group.source;
+      const source = document.createElement("span");
+      source.textContent = " · ";
+      if ($("support-sources").children.length) $("support-sources").append(source);
+      $("support-sources").append(link);
+    }
     const quoteWindow = () => Math.floor(Date.now() / QUOTE_WINDOW);
     const defaultSupport = () => ({
       enabled: true, hidden: [], focus: { window: quoteWindow(), index: quoteWindow() % 18 },

@@ -7,6 +7,10 @@ import * as client from "openid-client";
 import { PGlite } from "@electric-sql/pglite";
 import { createApp, validState } from "./server.mjs";
 import { createPostgresStore } from "./store.mjs";
+import { readFile } from "node:fs/promises";
+import { createContext, runInContext } from "node:vm";
+
+const supportScript = await readFile(new URL("./support-content.js", import.meta.url), "utf8");
 
 const state = () => ({
   tasks: [{ id: "task", text: "Task", done: false, notes: "Task notes",
@@ -356,6 +360,19 @@ test("Railway OIDC, owner-only access, CSRF, persistence, conflicts and logout",
       const nonce = html.match(/<script nonce="([^"]+)"/)[1];
       assert.ok(result.headers.get("content-security-policy").includes(`'nonce-${nonce}'`));
       assert.ok(!html.includes(identity.secret));
+      const scripts = [...html.matchAll(/<script nonce="([^"]+)">([\s\S]*?)<\/script>/g)];
+      assert.equal(scripts.length, 2);
+      assert.ok(scripts.every((match) => match[1] === nonce));
+      assert.equal(scripts[0][2], supportScript);
+      assert.ok(!html.includes('src="./support-content.js"'));
+      const context = createContext({ window: {} });
+      runInContext(scripts[0][2], context);
+      assert.equal(context.window.LITTLE_FOCUS_SUPPORT.groups.length, 3);
+      assert.equal(context.window.LITTLE_FOCUS_SUPPORT.rest.length, 6);
+      assert.equal(context.window.LITTLE_FOCUS_SUPPORT.suggestions.length, 3);
+      assert.equal(result.headers.get("cache-control"), "no-store");
+      assert.equal((await request("/support-content.js")).status, 404);
+      assert.equal((await request("/support-content.js", { headers: { Cookie: cookie } })).status, 404);
     });
     await t.test("cloud state survives requests and stale-device writes are refused", async () =>
     {

@@ -35,11 +35,12 @@ with a small DOM/storage/network test harness. They cover shared-browser drafts,
 backup merging, validation boundaries, concurrent timer completion, quote
 rotation/preferences, and focus/break transitions. The
 client/server validation contract is checked together; keep both validators
-aligned when changing limits. This keeps the local page a standalone HTML file.
+aligned when changing limits. The local page remains build-free.
 
 ## Local-only mode
 
-Open `index.html` directly. No server or dependencies are needed. Data stays in
+Keep `index.html` and `support-content.js` in the same directory, then open
+`index.html` directly. No server or dependencies are needed. Data stays in
 that browser's localStorage. Use **Export JSON backup** before changing browsers
 or moving to the cloud version.
 
@@ -72,6 +73,22 @@ IDs keep their current dates; new tasks bring their backup dates. Legacy step
 dates and notes are preserved in storage, sync, and backups but are not displayed.
 
 ## Quiet encouragement and optional breaks
+
+Edit **`support-content.js`** to maintain all encouragement lines, rest
+suggestions, group labels, and source URLs. It is the sole content resource,
+loaded as a classic script before the app, so `file://` needs neither fetch nor
+ES modules. Keep the three groups of six lines, six rest lines, and three
+suggestions in their current order: hidden preferences use pool/index keys.
+Changing existing positions would change which sentence a saved hidden key means.
+Missing or malformed content stops initialization with a visible error before
+task storage is read or changed; there is no empty-content fallback.
+
+In cloud mode the server reads this same file at startup and embeds it only in
+the authenticated HTML with that response's CSP nonce and `no-store` caching.
+No static-file route or additional CSP source is enabled. The Dockerfile includes
+the resource; deploy/restart the server after editing it. The resource is trusted
+application JavaScript, so edit text/data only, not code copied from untrusted
+sources.
 
 The timer has a small, static Chinese encouragement area: 18 original
 paraphrases grouped by Atomic Habits, CPT, and ACT, plus a separate six-line
