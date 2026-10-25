@@ -21,15 +21,20 @@ function contrast(a, b)
   return (values[0] + 0.05) / (values[1] + 0.05);
 }
 
-test("app and login share neutral system themes with accessible text, controls and focus contrast", () =>
+test("app and login share warm light and neutral dark themes with accessible contrast", () =>
 {
   const [appLight, appDark] = themes(styles(app));
   const [loginLight, loginDark] = themes(styles(login));
+  for (const [key, value] of Object.entries({
+    "--background": "#f7f7f2", "--surface": "#fffefa", "--ink": "#30312e",
+    "--line": "#e9eae2", "--accent": "#586b48", "--accent-soft": "#eef2e7",
+    "--timer": "#f0ede5", "--primary": "#586b48"
+  })) assert.equal(appLight[key], value, `Original light palette ${key}`);
   for (const [index, theme] of [appLight, appDark].entries())
   {
     for (const key of Object.keys(index ? loginDark : loginLight))
       assert.equal(theme[key], (index ? loginDark : loginLight)[key], `Shared ${key}`);
-    for (const key of ["--background", "--surface", "--ink", "--muted", "--timer", "--primary"])
+    for (const key of index ? ["--background", "--surface", "--ink", "--muted", "--timer", "--primary"] : [])
     {
       const parts = theme[key].slice(1).match(/../g);
       assert.ok(parts.every((part) => part === parts[0]), `Neutral ${key}`);

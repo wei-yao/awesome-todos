@@ -88,7 +88,7 @@ async function readJson(request)
 const loginPage = `<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>登录 · Little Focus</title>
-<style> :root{font:15px/1.6 system-ui,sans-serif;color-scheme:light;--background:#f5f5f5;--surface:#ffffff;--ink:#262626;--muted:#626262;--accent:#42634c;--primary:#333333;--on-primary:#ffffff;--primary-hover:#484848;--danger:#a52b2b;color:var(--ink);background:var(--background)}
+<style> :root{font:15px/1.6 system-ui,sans-serif;color-scheme:light;--background:#f7f7f2;--surface:#fffefa;--ink:#30312e;--muted:#696b61;--accent:#586b48;--primary:#586b48;--on-primary:#ffffff;--primary-hover:#60754f;--danger:#a52b2b;color:var(--ink);background:var(--background)}
 *{box-sizing:border-box}main{max-width:360px;margin:15vh auto;padding:28px}h1{font-size:28px;letter-spacing:-1px}
 p{color:var(--muted);font-size:14px}.login{display:block;font:inherit;text-align:center;border-radius:10px;padding:12px;margin-top:24px;background:var(--primary);color:var(--on-primary);text-decoration:none}
 .login:hover{background:var(--primary-hover)}.login:focus-visible{outline:2px solid var(--accent);outline-offset:4px}#error{color:var(--danger);min-height:24px}

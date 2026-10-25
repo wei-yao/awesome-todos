@@ -48,7 +48,7 @@ or moving to the cloud version.
 
 The login page, task list, and motto settings automatically follow the system's
 light/dark appearance, including changes while the page is open. Light mode uses
-neutral whites and grays; dark mode uses charcoal surfaces, with limited accent
+the original warm whites and soft green accents; dark mode uses charcoal surfaces, with limited accent
 colors and distinct error/deadline warnings. Native form controls follow the same
 color scheme; keyboard focus stays visible and reduced-motion preferences apply.
 
