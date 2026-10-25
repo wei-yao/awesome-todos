@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Little Focus · 待办与番茄钟</title>
+  <style>
+    :root {
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: #30312e;
+      background: #f7f7f2;
+      font-synthesis: none;
+      --surface: #fffefa;
+      --ink: #30312e;
+      --muted: #84867c;
+      --line: #e9eae2;
+      --accent: #586b48;
+      --accent-soft: #eef2e7;
+      --timer: #f0ede5;
+      --danger: #b24d43;
+      --shadow: 0 8px 32px #363c2305;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 280px; font-size: 15px; line-height: 1.6; }
+    button, input, select, textarea { font: inherit; }
+    button, select { cursor: pointer; }
+    button { color: inherit; }
+    button:disabled, select:disabled { cursor: not-allowed; opacity: .45; }
+    button { -webkit-tap-highlight-color: transparent; }
+    button, input, select, textarea { outline-offset: 4px; accent-color: var(--accent); }
+    :focus-visible { outline: 2px solid var(--accent); }
+    button { transition: background .18s, transform .18s, opacity .18s; }
+    button:active:not(:disabled) { transform: scale(.97); }
+    main { width: min(480px, calc(100% - 36px)); margin: 64px auto 36px; }
+    .eyebrow { display: flex; align-items: center; gap: 8px; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: 2px; }
+    .brand-icon { width: 22px; height: 22px; }
+    .heading { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+    h1 { font-size: clamp(24px, 6vw, 32px); letter-spacing: -1.2px; font-weight: 650; line-height: 1.25; margin: 0; }
+    .date { color: var(--muted); font-size: 12px; }
+    .subtitle { color: var(--muted); margin: 10px 0 28px; font-size: 14px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+    .tasks-card { padding: 21px 22px 10px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    h2 { font-size: 15px; font-weight: 650; margin: 0; }
+    .count { color: var(--muted); font-size: 12px; }
+    .add-form { display: flex; gap: 8px; border-bottom: 1px solid var(--line); margin-top: 14px; padding-bottom: 13px; }
+    .add-form input { min-width: 0; flex: 1; border: 0; background: transparent; color: var(--ink); padding: 8px 0; font-size: 14px; }
+    input::placeholder, textarea::placeholder { color: var(--muted); opacity: .8; }
+    .add-btn { width: 34px; height: 34px; align-self: center; background: var(--accent-soft); color: var(--accent); border: 0; border-radius: 10px; font-size: 24px; line-height: 1; }
+    .add-btn:hover { background: var(--line); }
+    .task-list { list-style: none; margin: 0; padding: 4px 0; }
+    .task { animation: appear .25s ease both; }
+    .task + .task { border-top: 1px solid var(--line); }
+    .task-row, .step-row { display: flex; align-items: center; gap: 11px; min-height: 62px; }
+    .completion { display: grid; place-items: center; position: relative; flex: 0 0 23px; min-height: 34px; cursor: pointer; }
+    .completion input { position: absolute; width: 22px; height: 22px; opacity: 0; margin: 0; cursor: pointer; }
+    .check { display: grid; place-items: center; flex: 0 0 21px; height: 21px; border: 1.5px solid #c9cebf; border-radius: 7px; transition: background .25s, border-color .25s, transform .25s; }
+    .check svg { width: 14px; fill: none; stroke: var(--surface); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 22; stroke-dashoffset: 22; transition: stroke-dashoffset .28s .06s; }
+    .completion input:checked + .check { background: var(--accent); border-color: var(--accent); animation: check-pop .3s ease; }
+    .completion input:checked + .check svg { stroke-dashoffset: 0; }
+    .completion input:focus-visible + .check { outline: 2px solid var(--accent); outline-offset: 4px; }
+    .task-text { min-width: 0; overflow-wrap: anywhere; font-size: 14px; transition: color .25s; text-decoration: line-through transparent; text-decoration-thickness: 1px; }
+    .is-done > .task-title .task-text, .is-done > .task-text { color: var(--muted); text-decoration-color: var(--muted); }
+    .task-title { display: flex; flex: 1; min-width: 0; gap: 8px; align-items: center; text-align: left; padding: 13px 0; border: 0; background: transparent; }
+    .task-title-copy { min-width: 0; flex: 1; }
+    .task-title .task-text { display: block; }
+    .task-progress { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .chevron { width: 12px; height: 12px; flex-shrink: 0; fill: none; stroke: var(--muted); stroke-width: 1.5; transition: transform .2s; }
+    .task-title[aria-expanded="true"] .chevron { transform: rotate(90deg); }
+    .task-panel { margin-bottom: 14px; border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--surface); animation: appear .2s ease; }
+    .panel-heading { color: var(--muted); font-size: 11px; font-weight: 600; margin: 0; }
+    .step-list { list-style: none; padding: 0; margin: 4px 0 0; }
+    .step + .step { border-top: 1px solid var(--line); }
+    .step-row { min-height: 46px; gap: 8px; }
+    .step-row > .task-text { flex: 1; font-size: 13px; }
+    .step .check { width: 18px; height: 18px; border-radius: 6px; flex-basis: 18px; }
+    .step .icon-btn { width: 27px; }
+    .notes-field { display: block; font-size: 11px; color: var(--muted); margin-top: 12px; }
+    .notes-input { display: block; width: 100%; min-height: 66px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); font-size: 13px; line-height: 1.6; padding: 9px 10px; margin-top: 5px; }
+    .step .notes-field { margin: 0 0 12px 31px; }
+    .step .notes-input { min-height: 54px; }
+    .step-form { margin-top: 6px; border-bottom: 0; padding-bottom: 0; gap: 6px; }
+    .step-form input { width: 0; font-size: 13px; }
+    .step-form .add-btn { width: 29px; height: 29px; font-size: 21px; }
+    .focus-target { margin: 10px 0 0; color: var(--accent); font-size: 12px; overflow-wrap: anywhere; }
+    .task-actions { display: flex; gap: 2px; flex-shrink: 0; }
+    .icon-btn { border: none; background: transparent; color: var(--muted); border-radius: 8px; width: 30px; height: 32px; display: grid; place-items: center; }
+    .icon-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .icon-btn:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
+    .delete-btn:hover { color: var(--danger) !important; background: #b24d4310 !important; }
+    .empty { margin: 20px 0; font-size: 13px; color: var(--muted); text-align: center; }
+    .focus-card { margin-top: 18px; padding: 22px; overflow: hidden; }
+    .focus-label { display: flex; align-items: center; gap: 7px; }
+    .small-dot { width: 6px; height: 6px; border-radius: 50%; background: #a6ad92; }
+    .timer-status { color: var(--accent); font-size: 12px; }
+    .mode-tabs { display: flex; padding: 4px; background: var(--timer); border-radius: 10px; margin-top: 20px; gap: 4px; }
+    .mode-tabs button { flex: 1; border: 0; border-radius: 7px; padding: 6px; color: var(--muted); background: transparent; font-size: 12px; }
+    .mode-tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 4px #00000008; }
+    .focus-input { display: block; width: 100%; background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; font-size: 13px; padding: 10px 11px; height: 43px; margin-top: 12px; }
+    .timer-area { text-align: center; padding: 26px 0 20px; }
+    .timer-ring { width: 204px; height: 204px; margin: auto; position: relative; display: grid; place-items: center; }
+    .ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+    .ring circle { fill: none; stroke-width: 3; }
+    .ring-track { stroke: var(--line); }
+    .ring-progress { stroke: #9ca889; stroke-linecap: round; transition: stroke-dashoffset .7s linear; }
+    .time { display: block; font-size: 48px; line-height: 1.2; font-weight: 450; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
+    .timer-caption { font-size: 11px; color: var(--muted); margin-top: 7px; letter-spacing: 1px; }
+    .duration { display: flex; justify-content: center; gap: 6px; margin-top: 18px; }
+    .duration button { border: 0; border-radius: 20px; padding: 4px 12px; background: transparent; font-size: 11px; color: var(--muted); }
+    .duration button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
+    .controls { display: flex; align-items: center; gap: 9px; }
+    .primary { flex: 1; border: 0; background: var(--accent); color: #fff; border-radius: 11px; padding: 11px; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 7px; }
+    .primary:hover:not(:disabled) { filter: brightness(1.08); }
+    .primary svg { width: 14px; height: 14px; fill: currentColor; }
+    .secondary { border: 1px solid var(--line); background: transparent; border-radius: 11px; padding: 10px 13px; font-size: 13px; }
+    .finish { display: block; margin: 12px auto 0; font-size: 12px; border: 0; background: transparent; color: var(--muted); padding: 3px 10px; }
+    .finish:hover { color: var(--accent); }
+    .history { padding: 24px 2px 0; }
+    .history h2 { font-size: 13px; }
+    .history-total { font-size: 11px; color: var(--muted); }
+    .history-list { list-style: none; padding: 0; margin: 12px 0 0; }
+    .history-item { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: flex-start; animation: appear .25s ease; }
+    .history-icon { background: var(--accent-soft); color: var(--accent); border-radius: 8px; padding: 2px 7px; font-size: 13px; }
+    .history-copy { flex: 1; min-width: 0; }
+    .history-name { font-size: 13px; overflow-wrap: anywhere; }
+    .history-meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .history-minutes { color: var(--accent); white-space: nowrap; font-size: 12px; padding-top: 2px; }
+    footer { text-align: center; font-size: 11px; color: var(--muted); padding-top: 30px; }
+    .leaf { color: var(--accent); margin-right: 4px; }
+    .notice { margin: 0 0 18px; border-radius: 10px; padding: 10px 12px; font-size: 13px; background: var(--accent-soft); color: var(--accent); }
+    .notice.error { color: var(--danger); background: #b24d4312; }
+    .cloud-controls, .backup-controls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; }
+    .cloud-controls { margin-top: 8px; justify-content: flex-start; }
+    .cloud-controls button, .cloud-controls a, .backup-controls button, .backup-controls label { font: inherit; font-size: 11px; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 7px; padding: 4px 9px; cursor: pointer; text-decoration: none; }
+    .backup-controls { margin-top: 14px; }
+    [inert] { opacity: .65; }
+    [hidden] { display: none !important; }
+    @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes check-pop { 50% { transform: scale(1.16); } }
+    @media (max-width: 520px) { main { margin-top: 32px; } .tasks-card, .focus-card { padding-left: 18px; padding-right: 18px; } }
+    @media (prefers-color-scheme: dark) {
+      :root { background: #1d211c; color: #e1e5da; --surface: #252a23; --ink: #e1e5da; --muted: #9aab91; --line: #363e32; --accent: #a5bc8d; --accent-soft: #333f2c; --timer: #1e241d; --danger: #ef9b90; --shadow: none; }
+      .primary { background: #a5bc8d; color: #20291b; }
+      .check { border-color: #626e58; }
+      .ring-progress { stroke: #a5bc8d; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="eyebrow">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 18C4 10 10 5 20 4c0 10-5 16-12 14M5 21 15 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        LITTLE FOCUS
+      </div>
+      <div class="heading"><h1>把今天，慢慢做好。</h1></div>
+      <p class="subtitle"><span id="today" class="date"></span> · 一次一件事，就很好。</p>
+    </header>
+    <div id="cloud-bar" class="notice" role="status" aria-live="polite" hidden>
+      <span id="cloud-status">正在连接云端…</span>
+      <div class="cloud-controls">
+        <button id="cloud-retry" type="button" hidden>重试保存</button>
+        <button id="cloud-reload" type="button" hidden>加载云端版本</button>
+        <a id="cloud-login" href="/" hidden>重新登录</a>
+        <button id="logout" type="button">退出登录</button>
+      </div>
+    </div>
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <section class="card tasks-card" aria-labelledby="tasks-heading">
+      <div class="section-head"><h2 id="tasks-heading">今日待办</h2><span id="task-count" class="count"></span></div>
+      <form id="add-form" class="add-form">
+        <input id="new-task" aria-label="新任务" placeholder="有什么想完成的小事？" maxlength="200" autocomplete="off" required>
+        <button class="add-btn" aria-label="添加任务" type="submit">+</button>
+      </form>
+      <ul id="task-list" class="task-list"></ul>
+      <p id="tasks-empty" class="empty" hidden>留一点空白。准备好时，添加第一件事。</p>
+    </section>
+    <section class="card focus-card" aria-labelledby="focus-heading">
+      <div class="section-head">
+        <h2 id="focus-heading" class="focus-label"><span class="small-dot"></span>专注时刻</h2>
+        <span id="timer-status" class="timer-status">准备就绪</span>
+      </div>
+      <div class="mode-tabs" role="tablist" aria-label="专注模式">
+        <button id="free-tab" role="tab" aria-selected="true" aria-controls="free-panel" type="button">自由专注</button>
+        <button id="task-tab" role="tab" aria-selected="false" aria-controls="task-panel" tabindex="-1" type="button">关联待办</button>
+      </div>
+      <div id="free-panel" role="tabpanel" aria-labelledby="free-tab">
+        <input id="focus-label" class="focus-input" aria-label="专注内容" placeholder="此刻想专注什么？也可以开始后再填" maxlength="200" autocomplete="off">
+      </div>
+      <div id="task-panel" role="tabpanel" aria-labelledby="task-tab" hidden>
+        <select id="focus-task" class="focus-input" aria-label="选择待办任务"></select>
+      </div>
+      <p id="focus-target" class="focus-target" hidden></p>
+      <div class="timer-area">
+        <div class="timer-ring">
+          <svg class="ring" viewBox="0 0 204 204" aria-hidden="true"><circle class="ring-track" cx="102" cy="102" r="96"/><circle id="ring-progress" class="ring-progress" cx="102" cy="102" r="96" stroke-dasharray="603.186" stroke-dashoffset="0"/></svg>
+          <div><output id="time" class="time" aria-label="剩余时间" role="timer" aria-live="off">25:00</output><div id="timer-caption" class="timer-caption">给自己一段不被打扰的时间</div></div>
+        </div>
+        <div class="duration" role="group" aria-label="专注时长">
+          <button type="button" data-minutes="15" aria-pressed="false">15 分钟</button>
+          <button type="button" data-minutes="25" aria-pressed="true">25 分钟</button>
+          <button type="button" data-minutes="50" aria-pressed="false">50 分钟</button>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="start" class="primary" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 3 8 5-8 5z"/></svg><span id="start-text">开始专注</span></button>
+        <button id="reset" class="secondary" type="button" disabled>重置</button>
+      </div>
+      <button id="finish" class="finish" type="button" hidden>结束并记录</button>
+    </section>
+    <section class="history" aria-labelledby="history-heading">
+      <div class="section-head"><h2 id="history-heading">专注足迹</h2><span id="history-total" class="history-total">每一分钟都算数</span></div>
+      <ul id="history-list" class="history-list"></ul>
+      <p id="history-empty" class="empty">你的第一段专注，会留在这里。</p>
+    </section>
+    <footer><span class="leaf">✧</span>小小进展，也是进展。<br><span id="storage-caption">自动保存在此浏览器 · 无需登录</span>
+      <div class="backup-controls">
+        <button id="export-backup" type="button">导出 JSON 备份</button>
+        <button id="import-backup" type="button">导入备份</button>
+        <input id="backup-file" type="file" accept=".json,application/json" aria-label="选择备份文件" hidden>
+      </div>
+    </footer>
+  </main>
+  <script>
+    "use strict";
+    const STORAGE_KEY = "little-focus-v1";
+    const CLOUD = Boolean(window.LITTLE_FOCUS_CLOUD);
+    const DRAFT_KEY = STORAGE_KEY + "-pending";
+    const $ = (id) => document.getElementById(id);
+    const uid = () => crypto.randomUUID();
+    const minutesFormat = (ms) => ms < 60000 ? "不足 1 分钟" : `${Math.floor(ms / 60000)} 分钟`;
+    const newTask = (text, done = false) => ({ id: uid(), text, done, notes: "", steps: [] });
+    const freshState = () => ({
+      tasks: [
+        newTask("读几页一直想看的书"),
+        newTask("给今天最重要的事留 25 分钟"),
+        newTask("喝杯水，整理一下桌面", true)
+      ],
+      history: [],
+      mode: "free",
+      label: "",
+      selectedTask: "",
+      selectedStep: "",
+      duration: 25,
+      timer: null
+    });
+    const expandedTasks = new Set();
+    let storageFailed = false;
+    let cloudReady = !CLOUD;
+    let cloudRevision = 0;
+    let cloudFailure = "";
+    let cloudPending = null;
+    let cloudFlight = null;
+    let cloudBusy = false;
+    let cloudReading = false;
+    let editVersion = 0;
+    let serverOffset = 0;
+    const clockNow = () => Date.now() + serverOffset;
+    function notify(text, error = false) {
+      $("notice").textContent = text;
+      $("notice").classList.toggle("error", error);
+      $("notice").hidden = false;
+    }
+    const optionalString = (value) => value === undefined || typeof value === "string";
+    const validItem = (item) => item && typeof item.id === "string" && typeof item.text === "string"
+      && typeof item.done === "boolean" && optionalString(item.notes);
+    function validState(value) {
+      return value && Array.isArray(value.tasks) && Array.isArray(value.history)
+        && value.tasks.every((t) => validItem(t) && (t.steps === undefined || (Array.isArray(t.steps) && t.steps.every(validItem))))
+        && value.history.every((h) => h && typeof h.id === "string" && typeof h.label === "string"
+          && Number.isFinite(h.elapsed) && h.elapsed >= 0 && Number.isFinite(h.endedAt) && typeof h.completed === "boolean"
+          && optionalString(h.stepId))
+        && ["free", "task"].includes(value.mode) && typeof value.label === "string"
+        && typeof value.selectedTask === "string" && optionalString(value.selectedStep) && [15, 25, 50].includes(value.duration)
+        && (value.timer === null || (typeof value.timer === "object" && typeof value.timer.id === "string"
+          && typeof value.timer.label === "string" && typeof value.timer.taskId === "string" && optionalString(value.timer.stepId)
+          && ["running", "paused"].includes(value.timer.status)
+          && Number.isFinite(value.timer.total) && value.timer.total > 0
+          && Number.isFinite(value.timer.remaining) && value.timer.remaining >= 0 && value.timer.remaining <= value.timer.total
+          && Number.isFinite(value.timer.endAt)));
+    }
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw === null) {
+          return freshState();
+        }
+        const saved = JSON.parse(raw);
+        if (!validState(saved)) {
+          throw new Error("Invalid saved data");
+        }
+        return normalize(saved);
+      } catch (error) {
+        storageFailed = true;
+        console.error("Unable to load Little Focus data", error);
+        notify("无法读取本地数据。为保护原记录，本次不会覆盖存储；请检查浏览器存储权限或备份原数据。", true);
+        return freshState();
+      }
+    }
+    function normalize(saved) {
+      saved.selectedStep ??= "";
+      for (const task of saved.tasks) {
+        task.notes ??= "";
+        task.steps ??= [];
+        for (const step of task.steps) {
+          step.notes ??= "";
+        }
+      }
+      if (saved.timer) {
+        saved.timer.stepId ??= "";
+      }
+      return saved;
+    }
+    let state = load();
+    function cacheState() {
+      try {
+        if (storageFailed) {
+          return;
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (error) {
+        console.error("Unable to save Little Focus data", error);
+        notify("本地保存失败，当前更改仅保留在本页。请检查浏览器存储空间或权限。", true);
+      }
+    }
+    function save() {
+      cacheState();
+      if (CLOUD) {
+        editVersion++;
+        cloudPending = { revision: cloudRevision, mutationId: uid(), state: structuredClone(state) };
+        preserveDraft();
+        if (cloudReady && !cloudFailure) {
+          void flushCloud();
+        }
+      }
+    }
+    function preserveDraft() {
+      try {
+        if (cloudPending || cloudFlight) {
+          localStorage.setItem(DRAFT_KEY, JSON.stringify(cloudPending || cloudFlight));
+        } else {
+          localStorage.removeItem(DRAFT_KEY);
+        }
+      } catch (error) {
+        console.error("Unable to preserve unsynced draft", error);
+        notify("未同步更改的本地备份失败。请立即导出 JSON 备份，不要关闭页面。", true);
+      }
+    }
+    function updateCloudStatus() {
+      if (!CLOUD) {
+        return;
+      }
+      const locked = !cloudReady || Boolean(cloudFailure);
+      document.querySelector(".tasks-card").inert = locked;
+      document.querySelector(".focus-card").inert = locked;
+      $("import-backup").disabled = locked;
+      $("cloud-bar").hidden = false;
+      $("cloud-bar").classList.toggle("error", Boolean(cloudFailure));
+      $("cloud-status").textContent = cloudFailure || (!cloudReady ? "正在连接云端，暂时只读…"
+        : cloudBusy || cloudPending ? "保存中…" : "已同步到云端");
+      $("cloud-retry").hidden = !cloudFailure;
+      $("cloud-retry").disabled = cloudBusy || cloudReading;
+      $("cloud-reload").hidden = !cloudFailure;
+      $("cloud-reload").disabled = cloudBusy || cloudReading;
+      $("storage-caption").textContent = "私人云端空间 · 多设备同步";
+    }
+    async function cloudRequest(path, options = {}) {
+      const sentAt = Date.now();
+      const response = await fetch(path, { ...options, signal: AbortSignal.timeout(15000) });
+      const body = await response.json();
+      if (!response.ok) {
+        const error = new Error(body.error || "云端请求失败。");
+        error.status = response.status;
+        throw error;
+      }
+      if (Number.isFinite(body.serverTime)) {
+        serverOffset = body.serverTime - (sentAt + Date.now()) / 2;
+      }
+      return body;
+    }
+    function reportCloudError(error) {
+      console.error("Cloud sync failed", error);
+      cloudFailure = error.status === 409 ? error.message
+        : error.status === 401 ? "登录已过期。本机未同步更改已保留，请先导出备份。"
+        : `未确认云端保存，暂时只读。本机更改已保留。${error.message}`;
+      $("cloud-login").hidden = error.status !== 401;
+      updateCloudStatus();
+    }
+    async function flushCloud() {
+      if (cloudBusy || !cloudReady || cloudFailure || (!cloudPending && !cloudFlight)) {
+        updateCloudStatus();
+        return;
+      }
+      cloudBusy = true;
+      try {
+        while (cloudPending || cloudFlight) {
+          if (!cloudFlight) {
+            cloudFlight = cloudPending;
+            cloudPending = null;
+            cloudFlight.revision = cloudRevision;
+          }
+          preserveDraft();
+          updateCloudStatus();
+          const result = await cloudRequest("/api/state", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(cloudFlight)
+          });
+          if (!Number.isSafeInteger(result.revision)) {
+            throw new Error("云端版本号无效。");
+          }
+          cloudRevision = result.revision;
+          cloudFlight = null;
+          if (cloudPending) {
+            cloudPending.revision = cloudRevision;
+          }
+          preserveDraft();
+        }
+      } catch (error) {
+        preserveDraft();
+        reportCloudError(error);
+      } finally {
+        cloudBusy = false;
+        updateCloudStatus();
+      }
+    }
+    async function refreshCloud(initial = false) {
+      if (cloudReading || cloudBusy || cloudPending || cloudFlight || (!initial && cloudFailure)) {
+        return;
+      }
+      cloudReading = true;
+      const version = editVersion;
+      try {
+        const result = await cloudRequest("/api/state");
+        if (!Number.isSafeInteger(result.revision) || result.revision < 0 || (result.state !== null && !validState(result.state))) {
+          throw new Error("云端数据格式无效，未覆盖本机数据。");
+        }
+        if (editVersion !== version || cloudPending || cloudFlight) {
+          return;
+        }
+        if (initial) {
+          const raw = localStorage.getItem(DRAFT_KEY);
+          if (raw) {
+            const draft = JSON.parse(raw);
+            if (!Number.isSafeInteger(draft.revision) || !draft.mutationId || !validState(draft.state)) {
+              throw new Error("发现无法读取的未同步备份，请先导出本机数据。");
+            }
+            state = normalize(draft.state);
+            cloudPending = draft;
+            cloudRevision = draft.revision;
+            cloudReady = true;
+            cloudFailure = "发现上次未确认同步的更改。请重试保存，或先导出备份再加载云端版本。";
+            render();
+            return;
+          }
+        }
+        if (initial || result.revision !== cloudRevision) {
+          cloudRevision = result.revision;
+          state = result.state ? normalize(result.state) : { ...freshState(), tasks: [] };
+          cacheState();
+          render();
+        }
+        cloudReady = true;
+        cloudFailure = "";
+        tick();
+      } catch (error) {
+        reportCloudError(error);
+      } finally {
+        cloudReading = false;
+        updateCloudStatus();
+      }
+    }
+    function remaining() {
+      if (!state.timer) {
+        return state.duration * 60000;
+      }
+      return state.timer.status === "running" ? Math.max(0, state.timer.endAt - clockNow()) : state.timer.remaining;
+    }
+    function iconButton(label, path, action, className = "") {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `icon-btn ${className}`;
+      button.setAttribute("aria-label", label);
+      button.title = label;
+      button.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
+      button.addEventListener("click", action);
+      return button;
+    }
+    function focusTarget(taskId = state.selectedTask, stepId = state.selectedStep) {
+      const task = state.tasks.find((t) => t.id === taskId && !t.done);
+      if (!task) {
+        return null;
+      }
+      const step = stepId ? task.steps.find((s) => s.id === stepId && !s.done) : null;
+      return stepId && !step ? null : { task, step };
+    }
+    const focusValue = (taskId, stepId = "") => stepId ? JSON.stringify([taskId, stepId]) : taskId;
+    function completionControl(item, onChange) {
+      const label = document.createElement("label");
+      label.className = "completion";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = item.done;
+      input.setAttribute("aria-label", `完成：${item.text}`);
+      const check = document.createElement("span");
+      check.className = "check";
+      check.setAttribute("aria-hidden", "true");
+      check.innerHTML = '<svg viewBox="0 0 20 20"><path d="m4 10 4 4 8-8"/></svg>';
+      input.addEventListener("change", () => {
+        item.done = input.checked;
+        onChange();
+        save();
+        renderTaskOptions();
+        renderTaskCount();
+        renderTimer();
+      });
+      label.append(input, check);
+      return label;
+    }
+    function notesField(item, title, placeholder) {
+      const label = document.createElement("label");
+      label.className = "notes-field";
+      label.textContent = title;
+      const textarea = document.createElement("textarea");
+      textarea.className = "notes-input";
+      textarea.rows = 2;
+      textarea.maxLength = 4000;
+      textarea.placeholder = placeholder;
+      textarea.value = item.notes;
+      textarea.setAttribute("aria-label", `${title}：${item.text}`);
+      textarea.addEventListener("input", () => {
+        item.notes = textarea.value;
+        save();
+      });
+      label.append(textarea);
+      return label;
+    }
+    function focusButton(task, step = null) {
+      const button = iconButton(`专注：${step ? step.text : task.text}`, '<circle cx="12" cy="13" r="8"/><path d="M10 1h4M12 5V3m-2 6 5 4-5 3z"/>', () => {
+        if (state.timer) {
+          return;
+        }
+        state.mode = "task";
+        state.selectedTask = task.id;
+        state.selectedStep = step?.id || "";
+        startTimer();
+        $("focus-heading").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "nearest" });
+      }, "focus-item-button");
+      button.dataset.taskId = task.id;
+      button.dataset.stepId = step?.id || "";
+      return button;
+    }
+    const deletePath = '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6"/>';
+    function renderSteps(task, panel) {
+      panel.replaceChildren();
+      const heading = document.createElement("h3");
+      heading.className = "panel-heading";
+      heading.textContent = "拆成小步骤，一步步来";
+      const list = document.createElement("ul");
+      list.className = "step-list";
+      list.setAttribute("aria-label", `${task.text}的步骤`);
+      for (const step of task.steps) {
+        const li = document.createElement("li");
+        li.className = "step";
+        li.dataset.stepId = step.id;
+        const row = document.createElement("div");
+        row.className = "step-row";
+        row.classList.toggle("is-done", step.done);
+        const text = document.createElement("span");
+        text.className = "task-text";
+        text.textContent = step.text;
+        const actions = document.createElement("div");
+        actions.className = "task-actions";
+        actions.append(focusButton(task, step), iconButton(`删除步骤：${step.text}`, deletePath, () => {
+          task.steps = task.steps.filter((s) => s.id !== step.id);
+          if (state.selectedTask === task.id && state.selectedStep === step.id) {
+            state.selectedStep = "";
+          }
+          save();
+          renderSteps(task, panel);
+          renderTaskOptions();
+          renderTaskCount();
+          renderTimer();
+          panel.querySelector(".step-form input").focus();
+        }, "delete-btn"));
+        row.append(completionControl(step, () => row.classList.toggle("is-done", step.done)), text, actions);
+        li.append(row, notesField(step, "详情", "添加想法、链接或具体做法…"));
+        list.append(li);
+      }
+      const form = document.createElement("form");
+      form.className = "add-form step-form";
+      const input = document.createElement("input");
+      input.placeholder = "添加一个步骤";
+      input.maxLength = 200;
+      input.required = true;
+      input.autocomplete = "off";
+      input.setAttribute("aria-label", `添加步骤：${task.text}`);
+      const add = document.createElement("button");
+      add.type = "submit";
+      add.className = "add-btn";
+      add.textContent = "+";
+      add.setAttribute("aria-label", `保存步骤：${task.text}`);
+      form.append(input, add);
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const text = input.value.trim();
+        if (!text) {
+          input.setCustomValidity("请输入步骤内容，不能只有空格。");
+          input.reportValidity();
+          return;
+        }
+        task.steps.push({ id: uid(), text, done: false, notes: "" });
+        save();
+        renderSteps(task, panel);
+        renderTaskOptions();
+        renderTaskCount();
+        renderTimer();
+        panel.querySelector(".step-form input").focus();
+      });
+      input.addEventListener("input", () => input.setCustomValidity(""));
+      panel.append(heading, list, form, notesField(task, "任务备注", "记录这件事的背景或想法…"));
+    }
+    function renderTasks() {
+      $("task-list").replaceChildren();
+      for (const task of state.tasks) {
+        const li = document.createElement("li");
+        li.className = "task";
+        li.dataset.taskId = task.id;
+        const row = document.createElement("div");
+        row.className = "task-row";
+        row.classList.toggle("is-done", task.done);
+        const title = document.createElement("button");
+        title.type = "button";
+        title.className = "task-title";
+        title.setAttribute("aria-expanded", String(expandedTasks.has(task.id)));
+        const panel = document.createElement("div");
+        panel.className = "task-panel";
+        panel.id = `task-details-${task.id}`;
+        panel.hidden = !expandedTasks.has(task.id);
+        panel.setAttribute("role", "region");
+        title.id = `task-title-${task.id}`;
+        panel.setAttribute("aria-labelledby", title.id);
+        title.setAttribute("aria-controls", panel.id);
+        const copy = document.createElement("span");
+        copy.className = "task-title-copy";
+        const text = document.createElement("span");
+        text.className = "task-text";
+        text.textContent = task.text;
+        const progress = document.createElement("span");
+        progress.className = "task-progress";
+        copy.append(text, progress);
+        title.append(copy);
+        title.insertAdjacentHTML("beforeend", '<svg class="chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="m4 2 4 4-4 4"/></svg>');
+        title.addEventListener("click", () => {
+          const expanded = !expandedTasks.has(task.id);
+          if (expanded) {
+            expandedTasks.add(task.id);
+          } else {
+            expandedTasks.delete(task.id);
+          }
+          title.setAttribute("aria-expanded", String(expanded));
+          panel.hidden = !expanded;
+        });
+        const actions = document.createElement("div");
+        actions.className = "task-actions";
+        const remove = iconButton(`删除：${task.text}`, deletePath, () => {
+          state.tasks = state.tasks.filter((t) => t.id !== task.id);
+          expandedTasks.delete(task.id);
+          if (state.selectedTask === task.id) {
+            state.selectedTask = "";
+            state.selectedStep = "";
+          }
+          save();
+          render();
+        }, "delete-btn");
+        actions.append(focusButton(task), remove);
+        row.append(completionControl(task, () => row.classList.toggle("is-done", task.done)), title, actions);
+        renderSteps(task, panel);
+        li.append(row, panel);
+        $("task-list").append(li);
+      }
+      renderTaskCount();
+    }
+    function renderTaskCount() {
+      const done = state.tasks.filter((t) => t.done).length;
+      $("task-count").textContent = `${done} / ${state.tasks.length} 已完成`;
+      $("tasks-empty").hidden = state.tasks.length > 0;
+      for (const li of $("task-list").children) {
+        const task = state.tasks.find((t) => t.id === li.dataset.taskId);
+        const progress = li.querySelector(".task-progress");
+        progress.textContent = task.steps.length ? `${task.steps.filter((s) => s.done).length} / ${task.steps.length} 步骤` : "";
+        progress.hidden = task.steps.length === 0;
+      }
+    }
+    function renderTaskOptions() {
+      const select = $("focus-task");
+      select.replaceChildren(new Option("选择一件想专注的事", ""));
+      function addOption(container, taskId, stepId, text) {
+        const option = new Option(text, focusValue(taskId, stepId));
+        option.dataset.taskId = taskId;
+        option.dataset.stepId = stepId;
+        container.append(option);
+      }
+      for (const task of state.tasks.filter((t) => !t.done)) {
+        const group = document.createElement("optgroup");
+        group.label = task.text;
+        addOption(group, task.id, "", task.text);
+        for (const step of task.steps.filter((s) => !s.done)) {
+          addOption(group, task.id, step.id, `↳ ${step.text}`);
+        }
+        select.append(group);
+      }
+      if (state.timer?.taskId && !focusTarget(state.timer.taskId, state.timer.stepId)) {
+        addOption(select, state.timer.taskId, state.timer.stepId, state.timer.label);
+      }
+      select.value = state.timer?.taskId
+        ? focusValue(state.timer.taskId, state.timer.stepId)
+        : focusValue(state.selectedTask, state.selectedStep);
+    }
+    function renderHistory() {
+      $("history-list").replaceChildren();
+      for (const entry of [...state.history].reverse()) {
+        const li = document.createElement("li");
+        li.className = "history-item";
+        const icon = document.createElement("span");
+        icon.className = "history-icon";
+        icon.textContent = entry.completed ? "✓" : "◷";
+        icon.setAttribute("aria-hidden", "true");
+        const copy = document.createElement("div");
+        copy.className = "history-copy";
+        const name = document.createElement("div");
+        name.className = "history-name";
+        name.textContent = entry.label;
+        const meta = document.createElement("div");
+        meta.className = "history-meta";
+        meta.textContent = `${new Date(entry.endedAt).toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} · ${entry.completed ? "完成专注" : "提前结束"}${entry.stepId ? " · 关联步骤" : entry.taskId ? " · 关联待办" : ""}`;
+        const duration = document.createElement("span");
+        duration.className = "history-minutes";
+        duration.textContent = minutesFormat(entry.elapsed);
+        copy.append(name, meta);
+        li.append(icon, copy, duration);
+        $("history-list").append(li);
+      }
+      $("history-empty").hidden = state.history.length > 0;
+      $("history-total").textContent = state.history.length
+        ? `${state.history.length} 次 · ${minutesFormat(state.history.reduce((sum, h) => sum + h.elapsed, 0))}`
+        : "每一分钟都算数";
+    }
+    function renderTimer() {
+      const active = Boolean(state.timer);
+      const running = state.timer?.status === "running";
+      const ms = remaining();
+      const seconds = Math.ceil(ms / 1000);
+      $("time").textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+      $("ring-progress").style.strokeDashoffset = String(603.186 * (1 - ms / (state.timer?.total || state.duration * 60000)));
+      $("timer-status").textContent = active ? (running ? "专注进行中" : "已暂停") : "准备就绪";
+      $("timer-caption").textContent = active ? (running ? "不急，一点一点向前" : "歇一口气，随时继续") : "给自己一段不被打扰的时间";
+      $("start-text").textContent = active ? (running ? "暂停专注" : "继续专注") : "开始专注";
+      $("start").disabled = !active && state.mode === "task" && !focusTarget();
+      $("reset").disabled = !active;
+      $("finish").hidden = !active;
+      $("free-tab").disabled = active;
+      $("task-tab").disabled = active;
+      $("focus-task").disabled = active;
+      $("focus-target").hidden = !active;
+      $("focus-target").textContent = active ? state.timer.label : "";
+      for (const button of document.querySelectorAll(".focus-item-button")) {
+        button.disabled = active || !focusTarget(button.dataset.taskId, button.dataset.stepId);
+      }
+      for (const button of document.querySelectorAll("[data-minutes]")) {
+        button.disabled = active;
+        button.setAttribute("aria-pressed", String(Number(button.dataset.minutes) === state.duration));
+      }
+      document.title = active ? `${$("time").textContent} · Little Focus` : "Little Focus · 待办与番茄钟";
+    }
+    function render() {
+      renderTasks();
+      renderTaskOptions();
+      renderHistory();
+      const free = state.mode === "free";
+      $("free-tab").setAttribute("aria-selected", String(free));
+      $("task-tab").setAttribute("aria-selected", String(!free));
+      $("free-tab").tabIndex = free ? 0 : -1;
+      $("task-tab").tabIndex = free ? -1 : 0;
+      $("free-panel").hidden = !free;
+      $("task-panel").hidden = free;
+      $("focus-label").value = state.label;
+      renderTimer();
+    }
+    function startTimer() {
+      if (state.timer) {
+        return;
+      }
+      const target = focusTarget();
+      if (state.mode === "task" && !target) {
+        notify("先选择一条未完成的待办或步骤。");
+        return;
+      }
+      const total = state.duration * 60000;
+      state.timer = {
+        id: uid(), status: "running", total, remaining: total, endAt: clockNow() + total,
+        taskId: state.mode === "task" ? target.task.id : "",
+        stepId: state.mode === "task" ? target.step?.id || "" : "",
+        label: state.mode === "task"
+          ? target.step ? `${target.task.text} › ${target.step.text}` : target.task.text
+          : state.label.trim() || "自由专注"
+      };
+      save();
+      render();
+    }
+    function finishTimer(completed) {
+      if (!state.timer) {
+        return;
+      }
+      const timer = state.timer;
+      if (!state.history.some((h) => h.id === timer.id)) {
+        state.history.push({
+          id: timer.id, label: timer.label, taskId: timer.taskId, stepId: timer.stepId,
+          elapsed: completed ? timer.total : Math.max(0, timer.total - remaining()),
+          endedAt: completed ? timer.endAt : clockNow(), completed
+        });
+      }
+      state.timer = null;
+      save();
+      render();
+      if (!storageFailed && !$("notice").classList.contains("error")) {
+        notify(completed ? "这段专注完成了。休息一下，做得很好。" : "已记录这段专注。每一点投入都有意义。");
+      }
+    }
+    function tick() {
+      if (CLOUD && (!cloudReady || cloudFailure)) {
+        renderTimer();
+        return;
+      }
+      if (state.timer?.status === "running" && remaining() <= 0) {
+        finishTimer(true);
+      } else {
+        renderTimer();
+      }
+    }
+    $("add-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const text = $("new-task").value.trim();
+      if (!text) {
+        $("new-task").setCustomValidity("请输入任务内容，不能只有空格。");
+        $("new-task").reportValidity();
+        return;
+      }
+      state.tasks.push(newTask(text));
+      save();
+      $("new-task").value = "";
+      render();
+      $("new-task").focus();
+    });
+    $("new-task").addEventListener("input", () => $("new-task").setCustomValidity(""));
+    for (const mode of ["free", "task"]) {
+      $(mode + "-tab").addEventListener("click", () => {
+        if (!state.timer) {
+          state.mode = mode;
+          save();
+          render();
+        }
+      });
+      $(mode + "-tab").addEventListener("keydown", (event) => {
+        if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key) && !state.timer) {
+          event.preventDefault();
+          const next = event.key === "Home" ? "free" : event.key === "End" ? "task" : mode === "free" ? "task" : "free";
+          $(next + "-tab").click();
+          $(next + "-tab").focus();
+        }
+      });
+    }
+    $("focus-label").addEventListener("input", () => {
+      state.label = $("focus-label").value;
+      if (state.timer && !state.timer.taskId) {
+        state.timer.label = state.label.trim() || "自由专注";
+      }
+      save();
+    });
+    $("focus-task").addEventListener("change", () => {
+      const option = $("focus-task").selectedOptions[0];
+      state.selectedTask = option?.dataset.taskId || "";
+      state.selectedStep = option?.dataset.stepId || "";
+      save();
+      renderTimer();
+    });
+    for (const button of document.querySelectorAll("[data-minutes]")) {
+      button.addEventListener("click", () => {
+        if (!state.timer) {
+          state.duration = Number(button.dataset.minutes);
+          save();
+          renderTimer();
+        }
+      });
+    }
+    $("start").addEventListener("click", () => {
+      if (!state.timer) {
+        startTimer();
+        return;
+      }
+      if (state.timer.status === "running" && remaining() <= 0) {
+        finishTimer(true);
+        return;
+      }
+      if (state.timer.status === "running") {
+        state.timer.remaining = remaining();
+        state.timer.status = "paused";
+      } else {
+        state.timer.endAt = clockNow() + state.timer.remaining;
+        state.timer.status = "running";
+      }
+      save();
+      renderTimer();
+    });
+    $("reset").addEventListener("click", () => {
+      if (!state.timer) {
+        return;
+      }
+      if (state.timer.status === "running" && remaining() <= 0) {
+        finishTimer(true);
+        return;
+      }
+      if (!confirm("重置计时？本次专注不会记录到历史。")) {
+        return;
+      }
+      state.timer = null;
+      save();
+      render();
+    });
+    $("finish").addEventListener("click", () => finishTimer(state.timer?.status === "running" && remaining() <= 0));
+    window.addEventListener("storage", (event) => {
+      if (event.key === STORAGE_KEY || event.key === null) {
+        if (CLOUD) {
+          if (!cloudBusy && !cloudPending && !cloudFlight && !cloudFailure) {
+            void refreshCloud();
+          }
+          return;
+        }
+        state = load();
+        render();
+        tick();
+      }
+    });
+    $("export-backup").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `little-focus-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+    $("import-backup").addEventListener("click", () => $("backup-file").click());
+    $("backup-file").addEventListener("change", async () => {
+      const file = $("backup-file").files[0];
+      if (!file) {
+        return;
+      }
+      try {
+        if (file.size > 2 * 1024 * 1024) {
+          throw new Error("备份超过 2 MB，无法导入。");
+        }
+        const imported = JSON.parse(await file.text());
+        if (!validState(imported)) {
+          throw new Error("备份格式无效，当前数据未更改。");
+        }
+        if (!confirm("导入任务、步骤和历史？相同 ID 保留现有内容，不导入正在进行的计时。")) {
+          return;
+        }
+        if (CLOUD && (!cloudReady || cloudFailure)) {
+          throw new Error("请先恢复云端连接，再导入备份。");
+        }
+        normalize(imported);
+        const tasks = new Set(state.tasks.map((task) => task.id));
+        const history = new Set(state.history.map((entry) => entry.id));
+        let added = 0;
+        for (const task of imported.tasks) {
+          if (!tasks.has(task.id)) {
+            state.tasks.push(task);
+            tasks.add(task.id);
+            added++;
+          }
+        }
+        for (const entry of imported.history) {
+          if (!history.has(entry.id)) {
+            state.history.push(entry);
+            history.add(entry.id);
+          }
+        }
+        save();
+        render();
+        notify(`已导入 ${added} 条任务及新增历史。已有 ID 的内容保持不变。`);
+      } catch (error) {
+        console.error("Backup import failed", error);
+        notify(error.message, true);
+      } finally {
+        $("backup-file").value = "";
+      }
+    });
+    $("cloud-retry").addEventListener("click", () => {
+      cloudFailure = "";
+      if (!cloudReady) {
+        void refreshCloud(true);
+      } else {
+        void flushCloud();
+        if (!cloudPending && !cloudFlight && !cloudBusy) {
+          void refreshCloud();
+        }
+      }
+      updateCloudStatus();
+    });
+    $("cloud-reload").addEventListener("click", async () => {
+      if (!confirm("丢弃本机未同步更改并加载云端？请先导出 JSON 备份。")) {
+        return;
+      }
+      cloudPending = null;
+      cloudFlight = null;
+      cloudFailure = "";
+      cloudReady = false;
+      preserveDraft();
+      await refreshCloud(true);
+    });
+    $("logout").addEventListener("click", async () => {
+      if (cloudPending || cloudFlight || cloudBusy) {
+        notify("还有未同步更改，请先保存或导出备份，再退出登录。", true);
+        return;
+      }
+      try {
+        await cloudRequest("/api/logout", { method: "POST" });
+        localStorage.removeItem(STORAGE_KEY);
+        location.replace("/");
+      } catch (error) {
+        reportCloudError(error);
+      }
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (CLOUD && !document.hidden) {
+        void refreshCloud();
+      }
+      tick();
+    });
+    $("today").textContent = new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" });
+    render();
+    if (CLOUD) {
+      updateCloudStatus();
+      void refreshCloud(true);
+      setInterval(() => {
+        if (!document.hidden) {
+          void refreshCloud();
+        }
+      }, 5000);
+    } else {
+      save();
+      tick();
+    }
+    setInterval(tick, 250);
+  </script>
+</body>
+</html>
