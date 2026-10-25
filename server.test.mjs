@@ -446,6 +446,36 @@ test("Railway OIDC, owner-only access, CSRF, persistence, conflicts and logout",
         }
       }
     });
+    await t.test("all focus presets persist running and paused timers; unsupported durations remain rejected", async () =>
+    {
+      for (const minutes of [15, 25, 30, 45, 50])
+      {
+        const value = { ...state(), duration: minutes, timer: {
+          id: `focus-${minutes}`, kind: "focus", label: "Focus", taskId: "", stepId: "",
+          status: "running", total: minutes * 60000, remaining: minutes * 60000, endAt: Date.now() + minutes * 60000
+        } };
+        for (const status of ["running", "paused"])
+        {
+          const before = await store.read();
+          value.timer.status = status;
+          assert.equal((await post("/api/state", {
+            revision: before.revision, mutationId: randomUUID(), state: value
+          }, cookie)).status, 200);
+          assert.deepEqual((await (await request("/api/state", { headers: { Cookie: cookie } })).json()).state, value);
+        }
+        const saved = await store.read();
+        for (const invalid of [
+          { ...value, duration: 20 },
+          { ...value, timer: { ...value.timer, total: 1200000, remaining: 1200000 } }
+        ])
+        {
+          assert.equal((await post("/api/state", {
+            revision: saved.revision, mutationId: randomUUID(), state: invalid
+          }, cookie)).status, 400);
+          assert.deepEqual(await store.read(), saved);
+        }
+      }
+    });
     await t.test("account motto libraries persist, reject invalid input and conflicts, and preserve empty deletion", async () =>
     {
       const value = { ...state(), mottos: [{ id: "mine", pool: "focus", text: "<b>Pure text</b>" },

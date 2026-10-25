@@ -144,11 +144,17 @@ async function browser({ local = storage(), cloud = false, fetch = remote().fetc
   }
   const tasksCard = new Element();
   const focusCard = new Element();
+  const durationButtons = [...html.matchAll(/<button[^>]*data-minutes="(\d+)"[^>]*>/g)].map(([, minutes]) =>
+  {
+    const button = new Element("button");
+    button.dataset.minutes = minutes;
+    return button;
+  });
   const document = {
     getElementById: (id) => elements.get(id),
     createElement: (tag) => new Element(tag),
     querySelector: (selector) => selector === ".tasks-card" ? tasksCard : focusCard,
-    querySelectorAll: () => [],
+    querySelectorAll: (selector) => selector === "[data-minutes]" ? durationButtons : [],
     addEventListener() {}
   };
   const windowListeners = {};
@@ -181,7 +187,7 @@ async function browser({ local = storage(), cloud = false, fetch = remote().fetc
   };
   await settle();
   return {
-    run, settle, context, local, elements, logs, downloads, tasksCard,
+    run, settle, context, local, elements, logs, downloads, tasksCard, durationButtons,
     setNow: (value) => { testNow = value; },
     get: () => clone(run("state")),
     value: (name, value) => { context[name] = structuredClone(value); },
@@ -196,6 +202,48 @@ async function browser({ local = storage(), cloud = false, fetch = remote().fetc
     quietRender: () => run("render = renderTimer = renderTasks = renderTaskOptions = renderHistory = renderTaskCount = () => {}")
   };
 }
+
+test("30 and 45 minute controls persist and run through pause, resume and completion without changing breaks", async () =>
+{
+  for (const minutes of [30, 45])
+  {
+    const now = 1800000000000;
+    const server = remote();
+    const page = await browser({ now, cloud: true, fetch: server.fetch });
+    assert.deepEqual(page.durationButtons.map((button) => Number(button.dataset.minutes)), [15, 25, 30, 45, 50]);
+    assert.equal(page.run("freshState().duration"), 25);
+    const button = page.durationButtons.find((button) => Number(button.dataset.minutes) === minutes);
+    await button.click();
+    await page.settle();
+    assert.equal(server.snapshot().state.duration, minutes);
+    assert.equal(button["aria-pressed"], "true");
+    assert.equal(page.elements.get("time").textContent, `${minutes}:00`);
+    await page.emit("start");
+    await page.settle();
+    assert.equal(page.get().timer.total, minutes * 60000);
+    assert.ok(page.durationButtons.every((button) => button.disabled));
+    page.setNow(now + 60000);
+    await page.emit("start");
+    await page.settle();
+    assert.equal(page.get().timer.remaining, (minutes - 1) * 60000);
+    const reopened = await browser({ now: now + 120000, cloud: true, fetch: server.fetch });
+    assert.equal(reopened.get().timer.status, "paused");
+    assert.equal(reopened.get().duration, minutes);
+    await reopened.emit("start");
+    await reopened.settle();
+    reopened.setNow(now + 120000 + (minutes - 1) * 60000);
+    reopened.run("tick()");
+    await reopened.settle();
+    assert.equal(server.snapshot().state.history[0].elapsed, minutes * 60000);
+    assert.equal(reopened.get().breakPrompt, "offer");
+    await reopened.emit("take-break");
+    assert.equal(reopened.get().timer.total, 300000);
+    await reopened.settle();
+    const restored = await browser();
+    await restored.import({ ...state(), duration: minutes });
+    assert.equal(restored.get().duration, 15); // Import does not change the current timer selection.
+  }
+});
 
 test("classic local resource loads before the app and is the sole source for quotes and metadata", async () =>
 {
@@ -1300,7 +1348,7 @@ test("client and server validators agree on exact limits, optional legacy fields
       check(make(field, 0), false);
     }
   }
-  for (const total of [900000, 1500000, 3000000])
+  for (const total of [900000, 1500000, 1800000, 2700000, 3000000])
     check({ ...timerState(), timer: { ...timerState().timer, total, remaining: total } }, true);
   check({ ...state(), tasks: "invalid" }, false);
   check({ ...state(), tasks: [{ ...task(), steps: {} }] }, false);

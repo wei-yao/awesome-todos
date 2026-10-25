@@ -44,6 +44,14 @@ Keep `index.html` and `support-content.js` in the same directory, then open
 that browser's localStorage. Use **Export JSON backup** before changing browsers
 or moving to the cloud version.
 
+## Appearance
+
+The login page, task list, and motto settings automatically follow the system's
+light/dark appearance, including changes while the page is open. Light mode uses
+neutral whites and grays; dark mode uses charcoal surfaces, with limited accent
+colors and distinct error/deadline warnings. Native form controls follow the same
+color scheme; keyboard focus stays visible and reduced-motion preferences apply.
+
 ## Task views
 
 Use **全部** (All), **未完成** (Active), or **已完成** (Completed) above the
@@ -73,6 +81,11 @@ IDs keep their current dates; new tasks bring their backup dates. Legacy step
 dates and notes are preserved in storage, sync, and backups but are not displayed.
 
 ## Quiet encouragement and optional breaks
+
+Focus presets are **15 / 25 / 30 / 45 / 50 minutes**, with **25 minutes** selected
+by default. Presets wrap on narrow screens and cannot change during an active or
+paused timer. The existing pause/resume, history, backup, and cloud synchronization
+rules apply to every preset. Optional breaks remain **5 minutes**.
 
 Use **格言设置** (Motto settings) in the footer to add, edit, or delete ordinary
 and rest mottos, then choose **保存句库**. **返回首页** returns to the timer.

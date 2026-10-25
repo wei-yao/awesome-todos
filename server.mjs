@@ -32,7 +32,7 @@ export function validState(value)
       && optionalText(entry.taskId, 128) && optionalText(entry.stepId, 128)
       && finite(entry.elapsed) && finite(entry.endedAt) && typeof entry.completed === "boolean")
     && unique(value.history) && ["free", "task"].includes(value.mode) && text(value.label, 200)
-    && text(value.selectedTask, 128) && optionalText(value.selectedStep, 128) && [15, 25, 50].includes(value.duration)
+    && text(value.selectedTask, 128) && optionalText(value.selectedStep, 128) && [15, 25, 30, 45, 50].includes(value.duration)
     && (value.breakPrompt === undefined || ["offer", "finished"].includes(value.breakPrompt))
     && !(value.timer && value.breakPrompt !== undefined)
     && (value.timer === null || (value.timer && text(value.timer.id, 128) && value.timer.id.length > 0
@@ -40,7 +40,7 @@ export function validState(value)
       && ["running", "paused"].includes(value.timer.status)
       && (value.timer.kind === "break"
         ? value.timer.total === 300000 && value.timer.taskId === "" && (value.timer.stepId === undefined || value.timer.stepId === "")
-        : (value.timer.kind === undefined || value.timer.kind === "focus") && [900000, 1500000, 3000000].includes(value.timer.total))
+        : (value.timer.kind === undefined || value.timer.kind === "focus") && [900000, 1500000, 1800000, 2700000, 3000000].includes(value.timer.total))
       && finite(value.timer.remaining) && value.timer.remaining <= value.timer.total && finite(value.timer.endAt))));
 }
 
@@ -88,11 +88,11 @@ async function readJson(request)
 const loginPage = `<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>登录 · Little Focus</title>
-<style> :root{font:15px/1.6 system-ui,sans-serif;color-scheme:light dark;color:#30312e;background:#f7f7f2}
+<style> :root{font:15px/1.6 system-ui,sans-serif;color-scheme:light;--background:#f5f5f5;--surface:#ffffff;--ink:#262626;--muted:#626262;--accent:#42634c;--primary:#333333;--on-primary:#ffffff;--primary-hover:#484848;--danger:#a52b2b;color:var(--ink);background:var(--background)}
 *{box-sizing:border-box}main{max-width:360px;margin:15vh auto;padding:28px}h1{font-size:28px;letter-spacing:-1px}
-p{color:#798271;font-size:14px}.login{display:block;font:inherit;text-align:center;border-radius:10px;padding:12px;margin-top:24px;background:#586b48;color:white;text-decoration:none}
-.login:focus-visible{outline:2px solid #586b48;outline-offset:4px}#error{color:#b24d43;min-height:24px}
-@media(prefers-color-scheme:dark){:root{color:#e1e5da;background:#1d211c}p{color:#a5bc8d}}
+p{color:var(--muted);font-size:14px}.login{display:block;font:inherit;text-align:center;border-radius:10px;padding:12px;margin-top:24px;background:var(--primary);color:var(--on-primary);text-decoration:none}
+.login:hover{background:var(--primary-hover)}.login:focus-visible{outline:2px solid var(--accent);outline-offset:4px}#error{color:var(--danger);min-height:24px}
+@media(prefers-color-scheme:dark){:root{color-scheme:dark;--background:#181818;--surface:#242424;--ink:#ededed;--muted:#b5b5b5;--accent:#a5c6b0;--primary:#dedede;--on-primary:#202020;--primary-hover:#ffffff;--danger:#ffaaaa}}
 </style></head><body><main><p>LITTLE FOCUS</p><h1>给自己一点专注。</h1><p>私人空间，仅允许你的账号登录。</p>
 <a id="login" class="login" href="/auth/login">使用 Railway 登录</a>
 <p>仅验证身份，不申请项目管理权限。</p><p id="error" role="alert">{{ERROR}}</p></main></body></html>`;

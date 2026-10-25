@@ -8,25 +8,36 @@
   <style>
     :root {
       font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
-      color: #30312e;
-      background: #f7f7f2;
+      color-scheme: light;
+      color: var(--ink);
+      background: var(--background);
       font-synthesis: none;
-      --surface: #fffefa;
-      --ink: #30312e;
-      --muted: #84867c;
-      --line: #e9eae2;
-      --accent: #586b48;
-      --accent-soft: #eef2e7;
-      --timer: #f0ede5;
-      --danger: #b24d43;
-      --shadow: 0 8px 32px #363c2305;
+      --background: #f5f5f5;
+      --surface: #ffffff;
+      --ink: #262626;
+      --muted: #626262;
+      --line: #dedede;
+      --control-line: #858585;
+      --accent: #42634c;
+      --accent-soft: #eeeeee;
+      --timer: #eeeeee;
+      --primary: #333333;
+      --on-primary: #ffffff;
+      --primary-hover: #484848;
+      --danger: #a52b2b;
+      --danger-soft: #fceeee;
+      --shadow: 0 8px 32px #00000005;
     }
     * { box-sizing: border-box; }
     body { margin: 0; min-width: 280px; font-size: 15px; line-height: 1.6; }
     button, input, select, textarea { font: inherit; }
     button, select { cursor: pointer; }
     button { color: inherit; }
-    button:disabled, select:disabled { cursor: not-allowed; opacity: .45; }
+    button:disabled, select:disabled, input:disabled { cursor: not-allowed; color: var(--muted); opacity: 1; }
+    button:disabled { background: var(--timer); }
+    select, input[type="date"] { color-scheme: inherit; }
+    select option, select optgroup { background: var(--surface); color: var(--ink); }
+    button:hover:not(:disabled), .backup-controls label:hover { background-color: var(--timer); }
     button { -webkit-tap-highlight-color: transparent; }
     button, input, select, textarea { outline-offset: 4px; accent-color: var(--accent); }
     :focus-visible { outline: 2px solid var(--accent); }
@@ -49,7 +60,7 @@
     .task-filters button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
     .add-form { display: flex; gap: 8px; border-bottom: 1px solid var(--line); margin-top: 14px; padding-bottom: 13px; }
     .add-form input { min-width: 0; flex: 1; border: 0; background: transparent; color: var(--ink); padding: 8px 0; font-size: 14px; }
-    input::placeholder, textarea::placeholder { color: var(--muted); opacity: .8; }
+    input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
     .add-btn { width: 34px; height: 34px; align-self: center; background: var(--accent-soft); color: var(--accent); border: 0; border-radius: 10px; font-size: 24px; line-height: 1; }
     .add-btn:hover { background: var(--line); }
     .task-list { list-style: none; margin: 0; padding: 4px 0; }
@@ -58,7 +69,7 @@
     .task-row, .step-row { display: flex; align-items: center; gap: 11px; min-height: 62px; }
     .completion { display: grid; place-items: center; position: relative; flex: 0 0 23px; min-height: 34px; cursor: pointer; }
     .completion input { position: absolute; width: 22px; height: 22px; opacity: 0; margin: 0; cursor: pointer; }
-    .check { display: grid; place-items: center; flex: 0 0 21px; height: 21px; border: 1.5px solid #c9cebf; border-radius: 7px; transition: background .25s, border-color .25s, transform .25s; }
+    .check { display: grid; place-items: center; flex: 0 0 21px; height: 21px; border: 1.5px solid var(--control-line); border-radius: 7px; transition: background .25s, border-color .25s, transform .25s; }
     .check svg { width: 14px; fill: none; stroke: var(--surface); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 22; stroke-dashoffset: 22; transition: stroke-dashoffset .28s .06s; }
     .completion input:checked + .check { background: var(--accent); border-color: var(--accent); animation: check-pop .3s ease; }
     .completion input:checked + .check svg { stroke-dashoffset: 0; }
@@ -95,12 +106,12 @@
     .icon-btn { border: none; background: transparent; color: var(--muted); border-radius: 8px; width: 30px; height: 32px; display: grid; place-items: center; }
     .icon-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
     .icon-btn:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
-    .delete-btn:hover { color: var(--danger) !important; background: #b24d4310 !important; }
+    .delete-btn:hover:not(:disabled) { color: var(--danger) !important; background: var(--danger-soft) !important; }
     .empty { margin: 20px 0; font-size: 13px; color: var(--muted); text-align: center; }
     .focus-card { margin-top: 18px; padding: 22px; overflow: hidden; }
     .focus-label { display: flex; align-items: center; gap: 7px; }
-    .small-dot { width: 6px; height: 6px; border-radius: 50%; background: #a6ad92; }
-    .timer-status { color: var(--accent); font-size: 12px; }
+    .small-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .timer-status { color: var(--muted); font-size: 12px; }
     .mode-tabs { display: flex; padding: 4px; background: var(--timer); border-radius: 10px; margin-top: 20px; gap: 4px; }
     .mode-tabs button { flex: 1; border: 0; border-radius: 7px; padding: 6px; color: var(--muted); background: transparent; font-size: 12px; }
     .mode-tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 4px #00000008; }
@@ -110,15 +121,15 @@
     .ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
     .ring circle { fill: none; stroke-width: 3; }
     .ring-track { stroke: var(--line); }
-    .ring-progress { stroke: #9ca889; stroke-linecap: round; transition: stroke-dashoffset .7s linear; }
+    .ring-progress { stroke: var(--control-line); stroke-linecap: round; transition: stroke-dashoffset .7s linear; }
     .time { display: block; font-size: 48px; line-height: 1.2; font-weight: 450; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
     .timer-caption { font-size: 11px; color: var(--muted); margin-top: 7px; letter-spacing: 1px; }
-    .duration { display: flex; justify-content: center; gap: 6px; margin-top: 18px; }
+    .duration { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 18px; }
     .duration button { border: 0; border-radius: 20px; padding: 4px 12px; background: transparent; font-size: 11px; color: var(--muted); }
     .duration button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
     .controls { display: flex; align-items: center; gap: 9px; }
-    .primary { flex: 1; border: 0; background: var(--accent); color: #fff; border-radius: 11px; padding: 11px; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 7px; }
-    .primary:hover:not(:disabled) { filter: brightness(1.08); }
+    .primary { flex: 1; border: 0; background: var(--primary); color: var(--on-primary); border-radius: 11px; padding: 11px; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 7px; }
+    .primary:hover:not(:disabled) { background: var(--primary-hover); }
     .primary svg { width: 14px; height: 14px; fill: currentColor; }
     .secondary { border: 1px solid var(--line); background: transparent; border-radius: 11px; padding: 10px 13px; font-size: 13px; }
     .finish { display: block; margin: 12px auto 0; font-size: 12px; border: 0; background: transparent; color: var(--muted); padding: 3px 10px; }
@@ -134,7 +145,7 @@
     .motto-item select { max-width: 100%; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 4px 8px; }
     .settings-copy { font-size: 12px; color: var(--muted); }
     .settings-copy.error { color: var(--danger); }
-    .rest-prompt { margin-top: 14px; font-size: 13px; color: var(--accent); }
+    .rest-prompt { margin-top: 14px; font-size: 13px; color: var(--ink); }
     .rest-suggestion { margin-top: 14px; font-size: 12px; color: var(--muted); }
     .rest-suggestion p { margin: 0 0 8px; }
     .history { padding: 24px 2px 0; }
@@ -146,25 +157,24 @@
     .history-copy { flex: 1; min-width: 0; }
     .history-name { font-size: 13px; overflow-wrap: anywhere; }
     .history-meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
-    .history-minutes { color: var(--accent); white-space: nowrap; font-size: 12px; padding-top: 2px; }
+    .history-minutes { color: var(--muted); white-space: nowrap; font-size: 12px; padding-top: 2px; }
     footer { text-align: center; font-size: 11px; color: var(--muted); padding-top: 30px; }
     .leaf { color: var(--accent); margin-right: 4px; }
-    .notice { margin: 0 0 18px; border-radius: 10px; padding: 10px 12px; font-size: 13px; background: var(--accent-soft); color: var(--accent); }
-    .notice.error { color: var(--danger); background: #b24d4312; }
+    .notice { margin: 0 0 18px; border-radius: 10px; padding: 10px 12px; font-size: 13px; background: var(--accent-soft); color: var(--ink); }
+    .notice.error { color: var(--danger); background: var(--danger-soft); }
     .cloud-controls, .backup-controls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; }
     .cloud-controls { margin-top: 8px; justify-content: flex-start; }
     .cloud-controls button, .cloud-controls a, .cloud-controls select, .backup-controls button, .backup-controls label { font: inherit; font-size: 11px; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 7px; padding: 4px 9px; cursor: pointer; text-decoration: none; }
     .backup-controls { margin-top: 14px; }
-    [inert] { opacity: .65; }
+    .deadline-input, .notes-input, .focus-input, .secondary, .quiet-actions button, .motto-item select,
+    .cloud-controls button, .cloud-controls a, .cloud-controls select, .backup-controls button, .backup-controls label { border-color: var(--control-line); }
+    [inert] { cursor: not-allowed; }
     [hidden] { display: none !important; }
     @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes check-pop { 50% { transform: scale(1.16); } }
     @media (max-width: 520px) { main { margin-top: 32px; } .tasks-card, .focus-card { padding-left: 18px; padding-right: 18px; } }
     @media (prefers-color-scheme: dark) {
-      :root { background: #1d211c; color: #e1e5da; --surface: #252a23; --ink: #e1e5da; --muted: #9aab91; --line: #363e32; --accent: #a5bc8d; --accent-soft: #333f2c; --timer: #1e241d; --danger: #ef9b90; --shadow: none; }
-      .primary { background: #a5bc8d; color: #20291b; }
-      .check { border-color: #626e58; }
-      .ring-progress { stroke: #a5bc8d; }
+      :root { color-scheme: dark; --background: #181818; --surface: #242424; --ink: #ededed; --muted: #b5b5b5; --line: #414141; --control-line: #909090; --accent: #a5c6b0; --accent-soft: #303030; --timer: #303030; --primary: #dedede; --on-primary: #202020; --primary-hover: #ffffff; --danger: #ffaaaa; --danger-soft: #392626; --shadow: none; }
     }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
   </style>
@@ -234,6 +244,8 @@
         <div id="duration-controls" class="duration" role="group" aria-label="专注时长">
           <button type="button" data-minutes="15" aria-pressed="false">15 分钟</button>
           <button type="button" data-minutes="25" aria-pressed="true">25 分钟</button>
+          <button type="button" data-minutes="30" aria-pressed="false">30 分钟</button>
+          <button type="button" data-minutes="45" aria-pressed="false">45 分钟</button>
           <button type="button" data-minutes="50" aria-pressed="false">50 分钟</button>
         </div>
       </div>
@@ -397,7 +409,7 @@
           && optionalText(entry.taskId, 128) && optionalText(entry.stepId, 128)
           && finite(entry.elapsed) && finite(entry.endedAt) && typeof entry.completed === "boolean")
         && unique(value.history) && ["free", "task"].includes(value.mode) && text(value.label, 200)
-        && text(value.selectedTask, 128) && optionalText(value.selectedStep, 128) && [15, 25, 50].includes(value.duration)
+        && text(value.selectedTask, 128) && optionalText(value.selectedStep, 128) && [15, 25, 30, 45, 50].includes(value.duration)
         && (value.breakPrompt === undefined || ["offer", "finished"].includes(value.breakPrompt))
         && !(value.timer && value.breakPrompt !== undefined)
         && (value.timer === null || (value.timer && text(value.timer.id, 128) && value.timer.id.length > 0
@@ -405,7 +417,7 @@
           && ["running", "paused"].includes(value.timer.status)
           && (value.timer.kind === "break"
             ? value.timer.total === 300000 && value.timer.taskId === "" && (value.timer.stepId === undefined || value.timer.stepId === "")
-            : (value.timer.kind === undefined || value.timer.kind === "focus") && [900000, 1500000, 3000000].includes(value.timer.total))
+            : (value.timer.kind === undefined || value.timer.kind === "focus") && [900000, 1500000, 1800000, 2700000, 3000000].includes(value.timer.total))
           && finite(value.timer.remaining) && value.timer.remaining <= value.timer.total && finite(value.timer.endAt))));
     }
     function stateError(value) {
