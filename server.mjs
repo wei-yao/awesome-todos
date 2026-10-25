@@ -7,11 +7,15 @@ import * as client from "openid-client";
 const digest = (text) => createHash("sha256").update(text).digest();
 const text = (value, max) => typeof value === "string" && value.length <= max;
 const optionalText = (value, max) => value === undefined || text(value, max);
+const validDueDate = (value) => value === undefined || value === ""
+  || (typeof value === "string" && /^(?!0000)\d{4}-\d{2}-\d{2}$/.test(value)
+    && Number.isFinite(Date.parse(value + "T00:00:00Z"))
+    && new Date(value + "T00:00:00Z").toISOString().slice(0, 10) === value);
 const finite = (value) => Number.isFinite(value) && value >= 0;
 const unique = (items) => new Set(items.map((item) => item?.id)).size === items.length;
 const item = (value) => value && text(value.id, 128) && value.id.length > 0
   && text(value.text, 200) && value.text.trim().length > 0
-  && typeof value.done === "boolean" && optionalText(value.notes, 4000);
+  && typeof value.done === "boolean" && optionalText(value.notes, 4000) && validDueDate(value.dueDate);
 
 export function validState(value)
 {
@@ -24,9 +28,14 @@ export function validState(value)
       && finite(entry.elapsed) && finite(entry.endedAt) && typeof entry.completed === "boolean")
     && unique(value.history) && ["free", "task"].includes(value.mode) && text(value.label, 200)
     && text(value.selectedTask, 128) && optionalText(value.selectedStep, 128) && [15, 25, 50].includes(value.duration)
+    && (value.breakPrompt === undefined || ["offer", "finished"].includes(value.breakPrompt))
+    && !(value.timer && value.breakPrompt !== undefined)
     && (value.timer === null || (value.timer && text(value.timer.id, 128) && value.timer.id.length > 0
       && text(value.timer.label, 405) && text(value.timer.taskId, 128) && optionalText(value.timer.stepId, 128)
-      && ["running", "paused"].includes(value.timer.status) && [900000, 1500000, 3000000].includes(value.timer.total)
+      && ["running", "paused"].includes(value.timer.status)
+      && (value.timer.kind === "break"
+        ? value.timer.total === 300000 && value.timer.taskId === "" && (value.timer.stepId === undefined || value.timer.stepId === "")
+        : (value.timer.kind === undefined || value.timer.kind === "focus") && [900000, 1500000, 3000000].includes(value.timer.total))
       && finite(value.timer.remaining) && value.timer.remaining <= value.timer.total && finite(value.timer.endAt))));
 }
 

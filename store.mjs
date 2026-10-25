@@ -1,4 +1,5 @@
 import pg from "pg";
+import { isDeepStrictEqual } from "node:util";
 
 export async function createPostgresStore(connectionString, pool = new pg.Pool({
   connectionString,
@@ -46,7 +47,8 @@ export async function createPostgresStore(connectionString, pool = new pg.Pool({
         return { revision: result.rows[0].revision };
       }
       const current = await read();
-      return current.last_write === mutationId ? { revision: current.revision } : null;
+      return current.last_write === mutationId && isDeepStrictEqual(current.state, state)
+        ? { revision: current.revision } : null;
     },
     async health()
     {

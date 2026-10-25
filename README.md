@@ -1,6 +1,7 @@
 # Little Focus
 
-A private task list with steps, notes, a Pomodoro timer, and focus history.
+A private task list with steps, task notes and deadlines, a Pomodoro timer,
+optional breaks, and focus history.
 
 Source repository: [wei-yao/awesome-todos](https://github.com/wei-yao/awesome-todos).
 
@@ -29,12 +30,103 @@ npm test
 Tests run locally with an embedded database and a local test identity provider.
 They do not require a running PostgreSQL server or real Railway credentials.
 Docker Desktop is not required to deploy: Railway builds the Dockerfile remotely.
+Client regressions execute the actual inline `index.html` script in Node's VM
+with a small DOM/storage/network test harness. They cover shared-browser drafts,
+backup merging, validation boundaries, concurrent timer completion, quote
+rotation/preferences, and focus/break transitions. The
+client/server validation contract is checked together; keep both validators
+aligned when changing limits. This keeps the local page a standalone HTML file.
 
 ## Local-only mode
 
 Open `index.html` directly. No server or dependencies are needed. Data stays in
 that browser's localStorage. Use **Export JSON backup** before changing browsers
 or moving to the cloud version.
+
+## Task views
+
+Use **全部** (All), **未完成** (Active), or **已完成** (Completed) above the
+task list to filter by the parent task's completion status. All is the default.
+Completed tasks keep their steps and notes; expand them to review details or
+uncheck them to move them back to Active. Completing individual steps does not
+automatically complete their parent task.
+
+The filter only changes the current page's display: it does not delete tasks,
+change focus history, or trigger cloud saves. Reloading returns to All.
+Adding a task from Completed switches to Active so the new task is visible.
+
+## Deadlines
+
+Expand a task to set its **截止日期** (Deadline) and edit its notes. Steps are
+simple checklist items with completion, focus, and delete controls only; they
+have no deadline or details fields. Dates are optional; use **清除** (Clear) to remove one. The list
+shows each deadline, with **今天到期** (Due today) and **已逾期** (Overdue) based
+on the current device's local calendar date. Status updates when the date changes,
+without reloading. Completed tasks keep their dates without urgency warnings.
+
+Deadlines are date-only (`dueDate: "YYYY-MM-DD"`, years 0001–9999), not moments
+in a particular time zone. They do not schedule notifications, reorder tasks,
+or change the timer. Dates are saved locally, synced in cloud mode, and included
+in JSON backups. Old records without dates remain valid. When importing, existing
+IDs keep their current dates; new tasks bring their backup dates. Legacy step
+dates and notes are preserved in storage, sync, and backups but are not displayed.
+
+## Quiet encouragement and optional breaks
+
+The timer has a small, static Chinese encouragement area: 18 original
+paraphrases grouped by Atomic Habits, CPT, and ACT, plus a separate six-line
+rest pool. These are not quotations from the books or therapy manuals.
+No AI, external content requests, scrolling, flashing, sounds, or notification
+permissions are used.
+
+Automatic selection changes at fixed 12-hour UTC windows (00:00 and 12:00 UTC).
+Refreshes retain the selection. While a focus timer exists, including while
+paused, automatic changes wait until it ends. **换一句** changes the current
+line, **不再显示这句** hides it, and **关闭短句** switches the area off.
+You can re-enable it or restore hidden lines in the expandable explanation.
+Manual choices last for the current window; hidden lines and opt-out persist.
+All these preferences are browser-local in `little-focus-v1-support`, shared
+by same-origin tabs but not cloud-synced or exported in task backups. Rotation
+never writes the cloud task document. Storage errors appear separately from
+data-save warnings.
+
+After a focus timer finishes, choose **休息 5 分钟** or **稍后休息**.
+Nothing automatically starts a break or the next focus. A break can be paused,
+resumed, or ended early. It offers one optional suggestion (water, comfortable
+movement/looking into the distance, or a one-minute grounding pause), with
+**换个建议** and **跳过建议**. Grounding uses natural breathing and allows open
+eyes; no breath holding, forced deep breathing, or clearing thoughts is required.
+Suggestions have no completion checks, scores, or rewards.
+
+When a break ends, the page says “休息时间到了。你可以继续，也可以再歇一会儿。”
+Choose the next focus, another five minutes, or **今天先到这里**. Breaks never
+enter focus history or its statistics. Early focus stops record the actual
+elapsed time without failure labels. Completing a timer does not overwrite
+storage/sync error messages with encouragement.
+
+Focus/break timers and pending rest choices use the same revisioned cloud
+document, recovery drafts, and absolute end times as the existing focus timer.
+They survive refreshes and synchronize across devices. Returning after a long
+absence completes only the current stage; it does not catch up missed cycles.
+Identical simultaneous completions converge; different concurrent edits still
+require recovery rather than silent merging.
+
+Legacy timers without `kind` remain focus timers. New timers distinguish
+`kind: "focus"` and `kind: "break"` (five minutes); an optional `breakPrompt`
+records `offer` or `finished` only when no timer is active. JSON exports retain
+these fields, but importing merges tasks/history only, never active timers or
+rest choices. Reload old open pages after updating to understand break timers.
+
+The expandable explanation links to
+[Atomic Habits](https://jamesclear.com/atomic-habits),
+[CPT](https://www.ptsd.va.gov/understand_tx/cognitive_processing.asp), and
+[ACT](https://contextualscience.org/six_core_processes_act).
+CPT is a specific cognitive-behavioral therapy, not another name for CBT.
+These short lines are general support, not ADHD/PTSD treatment or trauma
+processing exercises. The 12-hour rotation and five-minute break are product
+defaults, not clinical prescriptions. There are no streak penalties, mood
+scores, leaderboards, or AI coaching. Two-minute-start and current-step-only
+features are not part of this phase.
 
 ## Cloud mode
 
@@ -174,15 +266,63 @@ the service after the SSO deployment has been verified.
 
 Export a JSON backup from the old local page. Sign in to the hosted page and
 import that file. Tasks, steps, notes, and history are merged by ID. Existing
-IDs are not overwritten, and active timers are not imported.
+IDs are not overwritten, and active timers are not imported. A task that already
+exists still receives steps with new IDs; its existing title, notes, completion
+status, and same-ID steps stay unchanged.
 
 Edits save to the cloud. Pages refresh on returning to the tab and every five
 seconds while visible. Only one timer exists in the shared document.
 
 Writes use optimistic revisions and an idempotency key. A stale-device edit is
-refused instead of overwriting another device. On a conflict or network failure,
-editing becomes read-only and a recovery draft stays in localStorage. Retry
-the save, or export a backup before explicitly loading the cloud version.
+refused instead of overwriting another device. If two devices finish the same
+timer, a conflict is acknowledged only when the **entire saved document** equals
+the attempted write, not merely because the timer/history ID matches. Different
+task, step, or note edits still produce a conflict. Reusing an idempotency key with
+different content is also refused.
+
+On a conflict or network failure, editing becomes read-only. Each unacknowledged
+write has its own immutable localStorage draft under
+`little-focus-v1-pending-<mutationId>`; an in-flight write and its queued successor
+are retained separately. Another tab's successful save cannot clear these drafts.
+Only an acknowledged, locally superseded, or explicitly discarded snapshot is
+removed. Storage quota/permission failures are reported explicitly: in that case
+export immediately and do not close the page.
+
+Reopening the cloud page discovers remaining drafts, including the old
+`little-focus-v1-pending` format. Use the draft selector to view or export each
+snapshot. Retry the selected write, or export it before **Load cloud version**
+discards only the currently viewed changes. Loading must succeed before those
+drafts are removed; other snapshots remain available. Switching between drafts
+does not discard them, and recovery controls wait for this tab's in-flight
+request to finish. The separate **Discard selected draft** action can remove an
+unselected or unreadable snapshot after confirmation; it does not cancel requests
+already running in another tab. Draft exports include the write envelope and can
+be imported like ordinary backups. For a real conflict, export each needed
+snapshot, load the cloud version, then import the backups to recover new IDs;
+merging does not overwrite same-ID text or notes.
+
+### Data limits and rejected edits
+
+Both local and cloud modes validate the final candidate before changing the
+visible state, cache, or save queue, including after merging backups. Limits are
+1000 tasks, 500 steps per task, 20000 history entries, 128-character IDs,
+200-character task/step text and free-focus labels, 4000-character notes, and
+405-character timer/history labels. IDs must be unique within their task, step,
+or history collection; timer durations and nonnegative numeric fields must also
+match the server contract.
+
+The complete UTF-8 JSON request must fit in 2 MiB, not just the uploaded backup
+file. Client edits reserve space for a UUID mutation key and the largest revision
+number, so a near-limit queued write remains valid as its revision increases.
+An invalid or oversized merge is rejected as a whole, leaving existing data
+untouched. If the server still returns a validation/size rejection, editing stays
+available so the data can be corrected rather than trapping the page read-only.
+
+If recording a finished timer would exceed a limit, the timer and history stay
+intact and an error is shown; no history is silently trimmed. Export a backup,
+then use **Clear history** (with confirmation) to make room. The next timer tick
+can finish recording after a successful correction. Browser storage has its own
+quota, which can be smaller than the combined cache and recovery snapshots.
 
 Local backups and recovery drafts contain private task data. Use trusted
 machines, keep exported files private, and log out when finished.

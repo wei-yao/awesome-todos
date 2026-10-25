@@ -44,6 +44,9 @@
     .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     h2 { font-size: 15px; font-weight: 650; margin: 0; }
     .count { color: var(--muted); font-size: 12px; }
+    .task-filters { display: flex; gap: 6px; margin-top: 14px; }
+    .task-filters button { flex: 1; border: 0; border-radius: 8px; padding: 6px; background: transparent; color: var(--muted); font-size: 12px; }
+    .task-filters button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
     .add-form { display: flex; gap: 8px; border-bottom: 1px solid var(--line); margin-top: 14px; padding-bottom: 13px; }
     .add-form input { min-width: 0; flex: 1; border: 0; background: transparent; color: var(--ink); padding: 8px 0; font-size: 14px; }
     input::placeholder, textarea::placeholder { color: var(--muted); opacity: .8; }
@@ -74,12 +77,16 @@
     .step + .step { border-top: 1px solid var(--line); }
     .step-row { min-height: 46px; gap: 8px; }
     .step-row > .task-text { flex: 1; font-size: 13px; }
+    .deadline-status { display: block; font-size: 11px; color: var(--muted); }
+    .deadline-status.is-today { color: var(--accent); }
+    .deadline-status.is-overdue { color: var(--danger); }
+    .deadline-field { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-size: 11px; color: var(--muted); }
+    .deadline-input { min-width: 0; max-width: 100%; border: 1px solid var(--line); border-radius: 7px; padding: 4px 7px; background: transparent; color: var(--ink); }
+    .deadline-clear { border: 0; border-radius: 7px; padding: 4px 7px; background: transparent; color: var(--muted); font-size: 11px; }
     .step .check { width: 18px; height: 18px; border-radius: 6px; flex-basis: 18px; }
     .step .icon-btn { width: 27px; }
     .notes-field { display: block; font-size: 11px; color: var(--muted); margin-top: 12px; }
     .notes-input { display: block; width: 100%; min-height: 66px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); font-size: 13px; line-height: 1.6; padding: 9px 10px; margin-top: 5px; }
-    .step .notes-field { margin: 0 0 12px 31px; }
-    .step .notes-input { min-height: 54px; }
     .step-form { margin-top: 6px; border-bottom: 0; padding-bottom: 0; gap: 6px; }
     .step-form input { width: 0; font-size: 13px; }
     .step-form .add-btn { width: 29px; height: 29px; font-size: 21px; }
@@ -116,6 +123,16 @@
     .secondary { border: 1px solid var(--line); background: transparent; border-radius: 11px; padding: 10px 13px; font-size: 13px; }
     .finish { display: block; margin: 12px auto 0; font-size: 12px; border: 0; background: transparent; color: var(--muted); padding: 3px 10px; }
     .finish:hover { color: var(--accent); }
+    .support { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px; color: var(--muted); font-size: 12px; }
+    .support p { margin: 0 0 8px; }
+    .quiet-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .quiet-actions button { border: 1px solid var(--line); border-radius: 7px; background: transparent; color: inherit; padding: 4px 8px; font-size: 11px; }
+    .support details { margin-top: 10px; font-size: 11px; }
+    .support summary { cursor: pointer; }
+    .support a { color: var(--accent); }
+    .rest-prompt { margin-top: 14px; font-size: 13px; color: var(--accent); }
+    .rest-suggestion { margin-top: 14px; font-size: 12px; color: var(--muted); }
+    .rest-suggestion p { margin: 0 0 8px; }
     .history { padding: 24px 2px 0; }
     .history h2 { font-size: 13px; }
     .history-total { font-size: 11px; color: var(--muted); }
@@ -132,7 +149,7 @@
     .notice.error { color: var(--danger); background: #b24d4312; }
     .cloud-controls, .backup-controls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; }
     .cloud-controls { margin-top: 8px; justify-content: flex-start; }
-    .cloud-controls button, .cloud-controls a, .backup-controls button, .backup-controls label { font: inherit; font-size: 11px; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 7px; padding: 4px 9px; cursor: pointer; text-decoration: none; }
+    .cloud-controls button, .cloud-controls a, .cloud-controls select, .backup-controls button, .backup-controls label { font: inherit; font-size: 11px; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 7px; padding: 4px 9px; cursor: pointer; text-decoration: none; }
     .backup-controls { margin-top: 14px; }
     [inert] { opacity: .65; }
     [hidden] { display: none !important; }
@@ -166,10 +183,21 @@
         <a id="cloud-login" href="/" hidden>重新登录</a>
         <button id="logout" type="button">退出登录</button>
       </div>
+      <div class="cloud-controls" id="draft-controls" hidden>
+        <select id="draft-select" aria-label="未同步草稿"></select>
+        <button id="draft-open" type="button">查看草稿</button>
+        <button id="draft-export" type="button">导出所选草稿</button>
+        <button id="draft-discard" type="button">丢弃所选草稿</button>
+      </div>
     </div>
     <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
     <section class="card tasks-card" aria-labelledby="tasks-heading">
       <div class="section-head"><h2 id="tasks-heading">今日待办</h2><span id="task-count" class="count"></span></div>
+      <div class="task-filters" role="group" aria-label="任务视图">
+        <button id="tasks-all" type="button" aria-pressed="true" aria-controls="task-list">全部</button>
+        <button id="tasks-active" type="button" aria-pressed="false" aria-controls="task-list">未完成</button>
+        <button id="tasks-completed" type="button" aria-pressed="false" aria-controls="task-list">已完成</button>
+      </div>
       <form id="add-form" class="add-form">
         <input id="new-task" aria-label="新任务" placeholder="有什么想完成的小事？" maxlength="200" autocomplete="off" required>
         <button class="add-btn" aria-label="添加任务" type="submit">+</button>
@@ -198,7 +226,7 @@
           <svg class="ring" viewBox="0 0 204 204" aria-hidden="true"><circle class="ring-track" cx="102" cy="102" r="96"/><circle id="ring-progress" class="ring-progress" cx="102" cy="102" r="96" stroke-dasharray="603.186" stroke-dashoffset="0"/></svg>
           <div><output id="time" class="time" aria-label="剩余时间" role="timer" aria-live="off">25:00</output><div id="timer-caption" class="timer-caption">给自己一段不被打扰的时间</div></div>
         </div>
-        <div class="duration" role="group" aria-label="专注时长">
+        <div id="duration-controls" class="duration" role="group" aria-label="专注时长">
           <button type="button" data-minutes="15" aria-pressed="false">15 分钟</button>
           <button type="button" data-minutes="25" aria-pressed="true">25 分钟</button>
           <button type="button" data-minutes="50" aria-pressed="false">50 分钟</button>
@@ -209,6 +237,40 @@
         <button id="reset" class="secondary" type="button" disabled>重置</button>
       </div>
       <button id="finish" class="finish" type="button" hidden>结束并记录</button>
+      <div id="rest-prompt" class="rest-prompt" hidden>
+        <p id="rest-message"></p>
+        <div class="quiet-actions">
+          <button id="take-break" type="button">休息 5 分钟</button>
+          <button id="skip-break" type="button">稍后休息</button>
+          <button id="next-focus" type="button" hidden>开始下一段</button>
+          <button id="stop-today" type="button" hidden>今天先到这里</button>
+        </div>
+      </div>
+      <div id="rest-suggestion" class="rest-suggestion" hidden>
+        <p id="rest-suggestion-text"></p>
+        <div class="quiet-actions">
+          <button id="suggestion-next" type="button">换个建议</button>
+          <button id="suggestion-skip" type="button">跳过建议</button>
+        </div>
+      </div>
+      <aside class="support" aria-label="轻轻提醒">
+        <div id="quote-content">
+          <p id="support-quote"></p>
+          <div class="quiet-actions">
+            <button id="quote-next" type="button">换一句</button>
+            <button id="quote-hide" type="button">不再显示这句</button>
+          </div>
+        </div>
+        <div class="quiet-actions"><button id="quote-toggle" type="button">关闭短句</button></div>
+        <p id="support-error" role="status" hidden></p>
+        <details>
+          <summary>关于这些短句</summary>
+          <p>原创提炼，非原著引语。普通短句参考习惯养成、认知加工疗法（CPT）与接纳承诺疗法（ACT），休息短句独立轮换。CPT 是认知行为治疗（CBT）的一种具体疗法，不是其别名。</p>
+          <p>仅作一般性支持，不是 ADHD、PTSD 治疗或创伤处理练习。12 小时轮换和 5 分钟休息是产品默认值，不是临床处方。</p>
+          <p><a href="https://jamesclear.com/atomic-habits">Atomic Habits</a> · <a href="https://www.ptsd.va.gov/understand_tx/cognitive_processing.asp">CPT</a> · <a href="https://contextualscience.org/six_core_processes_act">ACT</a></p>
+          <div class="quiet-actions"><button id="quote-restore" type="button">恢复隐藏的短句</button></div>
+        </details>
+      </aside>
     </section>
     <section class="history" aria-labelledby="history-heading">
       <div class="section-head"><h2 id="history-heading">专注足迹</h2><span id="history-total" class="history-total">每一分钟都算数</span></div>
@@ -219,6 +281,7 @@
       <div class="backup-controls">
         <button id="export-backup" type="button">导出 JSON 备份</button>
         <button id="import-backup" type="button">导入备份</button>
+        <button id="clear-history" type="button">清空历史</button>
         <input id="backup-file" type="file" accept=".json,application/json" aria-label="选择备份文件" hidden>
       </div>
     </footer>
@@ -228,6 +291,8 @@
     const STORAGE_KEY = "little-focus-v1";
     const CLOUD = Boolean(window.LITTLE_FOCUS_CLOUD);
     const DRAFT_KEY = STORAGE_KEY + "-pending";
+    const DRAFT_PREFIX = DRAFT_KEY + "-";
+    const MAX_REQUEST_BYTES = 2 * 1024 * 1024;
     const $ = (id) => document.getElementById(id);
     const uid = () => crypto.randomUUID();
     const minutesFormat = (ms) => ms < 60000 ? "不足 1 分钟" : `${Math.floor(ms / 60000)} 分钟`;
@@ -247,39 +312,75 @@
       timer: null
     });
     const expandedTasks = new Set();
+    let taskView = "all";
     let storageFailed = false;
     let cloudReady = !CLOUD;
     let cloudRevision = 0;
     let cloudFailure = "";
+    let cloudRejected = false;
     let cloudPending = null;
     let cloudFlight = null;
     let cloudBusy = false;
     let cloudReading = false;
     let editVersion = 0;
     let serverOffset = 0;
+    let legacyDraft = null;
+    let blockedTimer = null;
+    let draftStorageFailed = false;
     const clockNow = () => Date.now() + serverOffset;
     function notify(text, error = false) {
       $("notice").textContent = text;
       $("notice").classList.toggle("error", error);
       $("notice").hidden = false;
     }
-    const optionalString = (value) => value === undefined || typeof value === "string";
-    const validItem = (item) => item && typeof item.id === "string" && typeof item.text === "string"
-      && typeof item.done === "boolean" && optionalString(item.notes);
+    // Match the server contract; client.test.mjs checks both validators at the boundaries.
+    const text = (value, max) => typeof value === "string" && value.length <= max;
+    const optionalText = (value, max) => value === undefined || text(value, max);
+    const validDueDate = (value) => value === undefined || value === ""
+      || (typeof value === "string" && /^(?!0000)\d{4}-\d{2}-\d{2}$/.test(value)
+        && Number.isFinite(Date.parse(value + "T00:00:00Z"))
+        && new Date(value + "T00:00:00Z").toISOString().slice(0, 10) === value);
+    const finite = (value) => Number.isFinite(value) && value >= 0;
+    const unique = (items) => new Set(items.map((item) => item?.id)).size === items.length;
+    const item = (value) => value && text(value.id, 128) && value.id.length > 0
+      && text(value.text, 200) && value.text.trim().length > 0
+      && typeof value.done === "boolean" && optionalText(value.notes, 4000) && validDueDate(value.dueDate);
     function validState(value) {
-      return value && Array.isArray(value.tasks) && Array.isArray(value.history)
-        && value.tasks.every((t) => validItem(t) && (t.steps === undefined || (Array.isArray(t.steps) && t.steps.every(validItem))))
-        && value.history.every((h) => h && typeof h.id === "string" && typeof h.label === "string"
-          && Number.isFinite(h.elapsed) && h.elapsed >= 0 && Number.isFinite(h.endedAt) && typeof h.completed === "boolean"
-          && optionalString(h.stepId))
-        && ["free", "task"].includes(value.mode) && typeof value.label === "string"
-        && typeof value.selectedTask === "string" && optionalString(value.selectedStep) && [15, 25, 50].includes(value.duration)
-        && (value.timer === null || (typeof value.timer === "object" && typeof value.timer.id === "string"
-          && typeof value.timer.label === "string" && typeof value.timer.taskId === "string" && optionalString(value.timer.stepId)
+      return Boolean(value && Array.isArray(value.tasks) && value.tasks.length <= 1000 && unique(value.tasks)
+        && value.tasks.every((task) => item(task) && (task.steps === undefined
+          || (Array.isArray(task.steps) && task.steps.length <= 500 && task.steps.every(item) && unique(task.steps))))
+        && Array.isArray(value.history) && value.history.length <= 20000
+        && value.history.every((entry) => entry && text(entry.id, 128) && text(entry.label, 405)
+          && optionalText(entry.taskId, 128) && optionalText(entry.stepId, 128)
+          && finite(entry.elapsed) && finite(entry.endedAt) && typeof entry.completed === "boolean")
+        && unique(value.history) && ["free", "task"].includes(value.mode) && text(value.label, 200)
+        && text(value.selectedTask, 128) && optionalText(value.selectedStep, 128) && [15, 25, 50].includes(value.duration)
+        && (value.breakPrompt === undefined || ["offer", "finished"].includes(value.breakPrompt))
+        && !(value.timer && value.breakPrompt !== undefined)
+        && (value.timer === null || (value.timer && text(value.timer.id, 128) && value.timer.id.length > 0
+          && text(value.timer.label, 405) && text(value.timer.taskId, 128) && optionalText(value.timer.stepId, 128)
           && ["running", "paused"].includes(value.timer.status)
-          && Number.isFinite(value.timer.total) && value.timer.total > 0
-          && Number.isFinite(value.timer.remaining) && value.timer.remaining >= 0 && value.timer.remaining <= value.timer.total
-          && Number.isFinite(value.timer.endAt)));
+          && (value.timer.kind === "break"
+            ? value.timer.total === 300000 && value.timer.taskId === "" && (value.timer.stepId === undefined || value.timer.stepId === "")
+            : (value.timer.kind === undefined || value.timer.kind === "focus") && [900000, 1500000, 3000000].includes(value.timer.total))
+          && finite(value.timer.remaining) && value.timer.remaining <= value.timer.total && finite(value.timer.endAt))));
+    }
+    function stateError(value) {
+      if (value.tasks?.length > 1000) return "最多保留 1000 条任务，请先删除不需要的任务。";
+      if (Array.isArray(value.tasks) && value.tasks.some((task) => task?.steps?.length > 500)) return "每条任务最多 500 个步骤，请先整理步骤。";
+      if (value.history?.length > 20000) return "最多保留 20000 条历史，请先导出备份，再清空历史。";
+      if (!validState(value)) return "数据格式无效：请检查长度、重复 ID、截止日期和计时数值。当前数据未更改。";
+      // Reserve the largest revision and a UUID, including the entire UTF-8 request envelope.
+      const body = { revision: Number.MAX_SAFE_INTEGER, mutationId: "0".repeat(36), state: value };
+      if (new TextEncoder().encode(JSON.stringify(body)).length > MAX_REQUEST_BYTES) {
+        return "合并后的数据超过 2 MiB 请求限制，请减少内容或导出备份后清空历史。";
+      }
+      return "";
+    }
+    function edit(change) {
+      const next = structuredClone(state);
+      change(next);
+      return save(next);
     }
     function load() {
       try {
@@ -314,6 +415,91 @@
       return saved;
     }
     let state = load();
+    const SUPPORT_KEY = STORAGE_KEY + "-support";
+    const QUOTE_WINDOW = 12 * 60 * 60 * 1000;
+    const quoteGroups = [
+      { source: "Atomic Habits", lines: ["先做两分钟，不必一次做完。", "让环境帮忙，少靠意志硬撑。", "把新习惯，接在熟悉的动作后。", "先重复，再慢慢优化。", "用小行动，练习想成为的自己。", "中断一次，不等于回到零。"] },
+      { source: "CPT", lines: ["自责，不是责任的证据。", "感受是真的，结论仍可核对。", "一次不顺，不是全部的你。", "用当时所知，理解当时的自己。", "“总是”和“永远”，也许有例外。", "换个角度，不是否认难处。"] },
+      { source: "ACT", lines: ["有这个念头，不必照着做。", "你不只是此刻的想法。", "注意力走远了，轻轻带回来。", "不必先有动力，才能迈一小步。", "朝在乎的方向，走一小步。", "接纳感受，不是放弃边界。"] }
+    ];
+    const quotePools = {
+      focus: quoteGroups.flatMap((group) => group.lines),
+      rest: ["休息，不需要先挣到。", "口渴的话，喝几口水。", "松松肩膀，让眼睛看看远处。", "这一分钟，不需要解决什么。", "不用清空思绪，只需停留片刻。", "还没恢复，可以再歇一会儿。"]
+    };
+    const restSuggestions = [
+      "口渴的话，喝几口水。",
+      "在舒服的范围内动一动，或让眼睛看看远处。",
+      "可试着静心 1 分钟：感受脚底，看看周围。自然呼吸，可以睁眼，不必清空思绪。"
+    ];
+    const quoteWindow = () => Math.floor(Date.now() / QUOTE_WINDOW);
+    const defaultSupport = () => ({
+      enabled: true, hidden: [], focus: { window: quoteWindow(), index: quoteWindow() % 18 },
+      rest: { window: quoteWindow(), index: quoteWindow() % 6 }, suggestion: 0, skipId: ""
+    });
+    let supportStorageFailed = false;
+    function loadSupport() {
+      try {
+        const raw = localStorage.getItem(SUPPORT_KEY);
+        if (raw === null) return defaultSupport();
+        const prefs = JSON.parse(raw);
+        if (!prefs || typeof prefs.enabled !== "boolean" || !Array.isArray(prefs.hidden)
+          || !prefs.hidden.every((key) => /^(focus:(?:[0-9]|1[0-7])|rest:[0-5])$/.test(key))
+          || !["focus", "rest"].every((pool) => prefs[pool] && Number.isSafeInteger(prefs[pool].window)
+            && Number.isInteger(prefs[pool].index) && prefs[pool].index >= 0 && prefs[pool].index < quotePools[pool].length)
+          || !Number.isInteger(prefs.suggestion) || prefs.suggestion < 0 || prefs.suggestion >= restSuggestions.length
+          || typeof prefs.skipId !== "string") throw new Error("Invalid support preferences");
+        supportStorageFailed = false;
+        return prefs;
+      } catch (error) {
+        supportStorageFailed = true;
+        console.error("Unable to load support preferences", error);
+        $("support-error").textContent = "无法读取短句偏好，原记录未覆盖。请检查浏览器存储。";
+        $("support-error").hidden = false;
+        return defaultSupport();
+      }
+    }
+    let support = loadSupport();
+    function saveSupport() {
+      try {
+        if (supportStorageFailed) throw new Error("Unreadable preferences retained");
+        localStorage.setItem(SUPPORT_KEY, JSON.stringify(support));
+        $("support-error").hidden = true;
+      } catch (error) {
+        console.error("Unable to save support preferences", error);
+        $("support-error").textContent = "短句偏好仅在本页生效，未能保存。请检查浏览器存储权限或空间。";
+        $("support-error").hidden = false;
+      }
+    }
+    const supportPool = () => state.timer?.kind === "break" || state.breakPrompt ? "rest" : "focus";
+    function availableQuote(pool, start) {
+      const lines = quotePools[pool];
+      for (let offset = 0; offset < lines.length; offset++) {
+        const index = (start + offset) % lines.length;
+        if (!support.hidden.includes(`${pool}:${index}`)) return index;
+      }
+      return -1;
+    }
+    function renderSupport() {
+      const pool = supportPool();
+      const selection = support[pool];
+      const frozen = state.timer && state.timer.kind !== "break";
+      if (!frozen && selection.window !== quoteWindow()) {
+        selection.window = quoteWindow();
+        selection.index = availableQuote(pool, selection.window % quotePools[pool].length);
+        if (selection.index < 0) selection.index = 0;
+        saveSupport();
+      }
+      const index = availableQuote(pool, selection.index);
+      $("quote-content").hidden = !support.enabled;
+      $("quote-toggle").textContent = support.enabled ? "关闭短句" : "显示短句";
+      $("support-quote").textContent = index < 0 ? "这些短句已全部隐藏，可在下方恢复。" : quotePools[pool][index];
+      $("quote-next").disabled = index < 0;
+      $("quote-hide").disabled = index < 0;
+      const resting = state.timer?.kind === "break";
+      $("rest-suggestion").hidden = !resting || support.skipId === state.timer.id;
+      $("rest-suggestion-text").textContent = restSuggestions[support.suggestion];
+    }
+    saveSupport();
     function cacheState() {
       try {
         if (storageFailed) {
@@ -325,37 +511,126 @@
         notify("本地保存失败，当前更改仅保留在本页。请检查浏览器存储空间或权限。", true);
       }
     }
-    function save() {
+    function save(next = state) {
+      if (CLOUD && (!cloudReady || (cloudFailure && !cloudRejected))) {
+        notify("请先恢复云端连接，当前更改未应用。", true);
+        return false;
+      }
+      const error = stateError(next);
+      if (error) {
+        notify(error, true);
+        return false;
+      }
+      state = next;
+      blockedTimer = null;
+      if (!storageFailed) {
+        $("notice").hidden = true;
+        $("notice").classList.toggle("error", false);
+      }
       cacheState();
       if (CLOUD) {
         editVersion++;
+        const previous = cloudPending;
+        const rejected = cloudRejected ? cloudFlight : null;
         cloudPending = { revision: cloudRevision, mutationId: uid(), state: structuredClone(state) };
-        preserveDraft();
+        if (preserveDraft()) {
+          removeDraft(previous);
+          removeDraft(rejected);
+        }
+        if (cloudRejected) {
+          cloudFlight = null;
+          cloudFailure = "";
+          cloudRejected = false;
+        }
         if (cloudReady && !cloudFailure) {
           void flushCloud();
         }
       }
+      return true;
     }
     function preserveDraft() {
       try {
-        if (cloudPending || cloudFlight) {
-          localStorage.setItem(DRAFT_KEY, JSON.stringify(cloudPending || cloudFlight));
-        } else {
-          localStorage.removeItem(DRAFT_KEY);
+        for (const draft of [cloudFlight, cloudPending].filter(Boolean)) {
+          const key = DRAFT_PREFIX + draft.mutationId;
+          const raw = JSON.stringify(draft);
+          const existing = localStorage.getItem(key);
+          if (existing !== null && existing !== raw) {
+            throw new Error("草稿 ID 对应的内容不一致，未覆盖原草稿。");
+          }
+          if (existing === null) localStorage.setItem(key, raw);
         }
+        draftStorageFailed = false;
+        return true;
       } catch (error) {
+        draftStorageFailed = true;
         console.error("Unable to preserve unsynced draft", error);
         notify("未同步更改的本地备份失败。请立即导出 JSON 备份，不要关闭页面。", true);
+        return false;
       }
+    }
+    function removeDraft(draft) {
+      if (!draft) return;
+      try {
+        const key = DRAFT_PREFIX + draft.mutationId;
+        if (localStorage.getItem(key) === JSON.stringify(draft)) localStorage.removeItem(key);
+        if (legacyDraft && legacyDraft.draft.mutationId === draft.mutationId
+          && localStorage.getItem(DRAFT_KEY) === legacyDraft.raw) {
+          localStorage.removeItem(DRAFT_KEY);
+          legacyDraft = null;
+        }
+      } catch (error) {
+        console.error("Unable to remove resolved draft", error);
+        notify("已处理草稿，但无法清理本地副本；下次打开可能再次提示恢复。", true);
+      }
+    }
+    function draftKeys() {
+      return Object.keys(localStorage).filter((key) => key === DRAFT_KEY || key.startsWith(DRAFT_PREFIX)).sort();
+    }
+    function updateDraftOptions() {
+      try {
+        const keys = draftKeys();
+        const selected = $("draft-select").value;
+        $("draft-select").replaceChildren(...keys.map((key, index) =>
+          new Option(`草稿 ${index + 1} · ${key === DRAFT_KEY ? "旧版" : key.slice(-8)}`, key)));
+        if (keys.includes(selected)) $("draft-select").value = selected;
+        $("draft-controls").hidden = keys.length === 0;
+        $("draft-open").disabled = cloudBusy || cloudReading;
+        $("draft-discard").disabled = cloudBusy || cloudReading;
+      } catch (error) {
+        console.error("Unable to list recovery drafts", error);
+        notify("无法读取本地草稿列表，请检查浏览器存储权限。", true);
+      }
+    }
+    function openDraft(key) {
+      const raw = localStorage.getItem(key);
+      if (raw === null) throw new Error("该草稿已被确认或丢弃，请刷新草稿列表。");
+      const draft = JSON.parse(raw);
+      if (!draft || !Number.isSafeInteger(draft.revision) || draft.revision < 0
+        || !text(draft.mutationId, 128) || !draft.mutationId || !validState(draft.state)
+        || (key !== DRAFT_KEY && key !== DRAFT_PREFIX + draft.mutationId)) {
+        throw new Error("草稿格式无效；原始数据仍保留，可导出所选草稿。");
+      }
+      if (key === DRAFT_KEY) legacyDraft = { raw, draft };
+      state = normalize(structuredClone(draft.state));
+      cloudFlight = draft;
+      cloudPending = null;
+      cloudRevision = draft.revision;
+      cloudReady = true;
+      cloudRejected = Boolean(stateError(state));
+      cloudFailure = cloudRejected ? `${stateError(state)} 可继续编辑纠正，或导出备份。`
+        : "发现未确认同步的草稿。请重试保存，或先导出备份再加载云端版本；其他草稿不会被丢弃。";
+      editVersion++;
+      render();
     }
     function updateCloudStatus() {
       if (!CLOUD) {
         return;
       }
-      const locked = !cloudReady || Boolean(cloudFailure);
+      const locked = !cloudReady || (Boolean(cloudFailure) && !cloudRejected);
       document.querySelector(".tasks-card").inert = locked;
       document.querySelector(".focus-card").inert = locked;
       $("import-backup").disabled = locked;
+      $("clear-history").disabled = locked;
       $("cloud-bar").hidden = false;
       $("cloud-bar").classList.toggle("error", Boolean(cloudFailure));
       $("cloud-status").textContent = cloudFailure || (!cloudReady ? "正在连接云端，暂时只读…"
@@ -365,6 +640,7 @@
       $("cloud-reload").hidden = !cloudFailure;
       $("cloud-reload").disabled = cloudBusy || cloudReading;
       $("storage-caption").textContent = "私人云端空间 · 多设备同步";
+      updateDraftOptions();
     }
     async function cloudRequest(path, options = {}) {
       const sentAt = Date.now();
@@ -382,11 +658,43 @@
     }
     function reportCloudError(error) {
       console.error("Cloud sync failed", error);
-      cloudFailure = error.status === 409 ? error.message
-        : error.status === 401 ? "登录已过期。本机未同步更改已保留，请先导出备份。"
-        : `未确认云端保存，暂时只读。本机更改已保留。${error.message}`;
+      cloudRejected = error.status === 400 || error.status === 413;
+      const retained = draftStorageFailed ? "本地草稿保存失败，更改仅在本页，请立即导出备份，不要关闭页面。"
+        : "本机未同步更改已保留。";
+      cloudFailure = cloudRejected ? `${error.message} 更改未保存，可继续编辑纠正，或加载云端版本。`
+        : error.status === 409 ? error.message
+        : error.status === 401 ? `登录已过期。${retained}`
+        : `未确认云端保存，暂时只读。${retained}${error.message}`;
       $("cloud-login").hidden = error.status !== 401;
       updateCloudStatus();
+    }
+    function sameState(left, right) {
+      if (left === right) return true;
+      if (!left || !right || typeof left !== "object" || typeof right !== "object"
+        || Array.isArray(left) !== Array.isArray(right)) return false;
+      const keys = Object.keys(left);
+      return keys.length === Object.keys(right).length
+        && keys.every((key) => Object.hasOwn(right, key) && sameState(left[key], right[key]));
+    }
+    async function writeCloud(draft) {
+      if (!validState(draft.state) || new TextEncoder().encode(JSON.stringify(draft)).length > MAX_REQUEST_BYTES) {
+        const error = new Error("待恢复的数据不符合保存限制，请先减少内容。");
+        error.status = 400;
+        throw error;
+      }
+      try {
+        return await cloudRequest("/api/state", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(draft)
+        });
+      } catch (error) {
+        if (error.status !== 409) throw error;
+        const current = await cloudRequest("/api/state");
+        // Only an identical whole document is a successful concurrent completion.
+        if (!sameState(current.state, draft.state)) throw error;
+        return current;
+      }
     }
     async function flushCloud() {
       if (cloudBusy || !cloudReady || cloudFailure || (!cloudPending && !cloudFlight)) {
@@ -397,25 +705,23 @@
       try {
         while (cloudPending || cloudFlight) {
           if (!cloudFlight) {
+            if (cloudPending.revision !== cloudRevision) {
+              const previous = cloudPending;
+              cloudPending = { ...previous, revision: cloudRevision, mutationId: uid() };
+              if (preserveDraft()) removeDraft(previous);
+            }
             cloudFlight = cloudPending;
             cloudPending = null;
-            cloudFlight.revision = cloudRevision;
           }
           preserveDraft();
           updateCloudStatus();
-          const result = await cloudRequest("/api/state", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(cloudFlight)
-          });
-          if (!Number.isSafeInteger(result.revision)) {
+          const result = await writeCloud(cloudFlight);
+          if (!Number.isSafeInteger(result.revision) || result.revision < cloudFlight.revision) {
             throw new Error("云端版本号无效。");
           }
           cloudRevision = result.revision;
+          removeDraft(cloudFlight);
           cloudFlight = null;
-          if (cloudPending) {
-            cloudPending.revision = cloudRevision;
-          }
           preserveDraft();
         }
       } catch (error) {
@@ -426,7 +732,7 @@
         updateCloudStatus();
       }
     }
-    async function refreshCloud(initial = false) {
+    async function refreshCloud(initial = false, recover = initial) {
       if (cloudReading || cloudBusy || cloudPending || cloudFlight || (!initial && cloudFailure)) {
         return;
       }
@@ -440,19 +746,10 @@
         if (editVersion !== version || cloudPending || cloudFlight) {
           return;
         }
-        if (initial) {
-          const raw = localStorage.getItem(DRAFT_KEY);
-          if (raw) {
-            const draft = JSON.parse(raw);
-            if (!Number.isSafeInteger(draft.revision) || !draft.mutationId || !validState(draft.state)) {
-              throw new Error("发现无法读取的未同步备份，请先导出本机数据。");
-            }
-            state = normalize(draft.state);
-            cloudPending = draft;
-            cloudRevision = draft.revision;
-            cloudReady = true;
-            cloudFailure = "发现上次未确认同步的更改。请重试保存，或先导出备份再加载云端版本。";
-            render();
+        if (recover) {
+          const keys = draftKeys();
+          if (keys.length) {
+            openDraft(keys[0]);
             return;
           }
         }
@@ -464,7 +761,9 @@
         }
         cloudReady = true;
         cloudFailure = "";
+        cloudRejected = false;
         tick();
+        return true;
       } catch (error) {
         reportCloudError(error);
       } finally {
@@ -497,7 +796,11 @@
       return stepId && !step ? null : { task, step };
     }
     const focusValue = (taskId, stepId = "") => stepId ? JSON.stringify([taskId, stepId]) : taskId;
-    function completionControl(item, onChange) {
+    const editableItem = (next, taskId, stepId) => {
+      const task = next.tasks.find((entry) => entry.id === taskId);
+      return stepId ? task.steps.find((entry) => entry.id === stepId) : task;
+    };
+    function completionControl(item, taskId, stepId, onChange) {
       const label = document.createElement("label");
       label.className = "completion";
       const input = document.createElement("input");
@@ -509,9 +812,11 @@
       check.setAttribute("aria-hidden", "true");
       check.innerHTML = '<svg viewBox="0 0 20 20"><path d="m4 10 4 4 8-8"/></svg>';
       input.addEventListener("change", () => {
-        item.done = input.checked;
-        onChange();
-        save();
+        if (!edit((next) => { editableItem(next, taskId, stepId).done = input.checked; })) {
+          input.checked = editableItem(state, taskId, stepId).done;
+          return;
+        }
+        onChange(input.checked);
         renderTaskOptions();
         renderTaskCount();
         renderTimer();
@@ -519,7 +824,7 @@
       label.append(input, check);
       return label;
     }
-    function notesField(item, title, placeholder) {
+    function notesField(item, taskId, stepId, title, placeholder) {
       const label = document.createElement("label");
       label.className = "notes-field";
       label.textContent = title;
@@ -531,21 +836,88 @@
       textarea.value = item.notes;
       textarea.setAttribute("aria-label", `${title}：${item.text}`);
       textarea.addEventListener("input", () => {
-        item.notes = textarea.value;
-        save();
+        if (!edit((next) => { editableItem(next, taskId, stepId).notes = textarea.value; })) {
+          textarea.value = editableItem(state, taskId, stepId).notes;
+        }
       });
       label.append(textarea);
       return label;
+    }
+    const localDate = (date = new Date()) => `${String(date.getFullYear()).padStart(4, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    let deadlineDay = localDate();
+    function deadlineStatus(item, today = localDate()) {
+      if (!item.dueDate) return { text: "", urgency: "" };
+      const urgency = item.done ? "" : item.dueDate < today ? "overdue" : item.dueDate === today ? "today" : "";
+      return {
+        text: `${item.dueDate} · ${urgency === "overdue" ? "已逾期" : urgency === "today" ? "今天到期" : "截止"}`,
+        urgency
+      };
+    }
+    function deadlineBadge(taskId) {
+      const badge = document.createElement("span");
+      badge.className = "deadline-status";
+      badge.dataset.taskId = taskId;
+      return badge;
+    }
+    function renderDeadlines() {
+      const today = localDate();
+      for (const badge of $("task-list").querySelectorAll(".deadline-status")) {
+        const task = state.tasks.find((task) => task.id === badge.dataset.taskId);
+        const status = deadlineStatus(task, today);
+        badge.textContent = status.text;
+        badge.hidden = !status.text;
+        badge.classList.toggle("is-today", status.urgency === "today");
+        badge.classList.toggle("is-overdue", status.urgency === "overdue");
+      }
+      deadlineDay = today;
+    }
+    function deadlineField(item, taskId) {
+      const field = document.createElement("div");
+      field.className = "deadline-field";
+      const label = document.createElement("label");
+      label.textContent = "截止日期";
+      const input = document.createElement("input");
+      input.type = "date";
+      input.className = "deadline-input";
+      input.min = "0001-01-01";
+      input.max = "9999-12-31";
+      input.value = item.dueDate || "";
+      input.setAttribute("aria-label", `截止日期：${item.text}`);
+      label.append(input);
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.className = "deadline-clear";
+      clear.textContent = "清除";
+      clear.disabled = !input.value;
+      const commit = (value) => {
+        if (input.validity?.badInput || !validDueDate(value)) {
+          notify("请输入有效的截止日期（年-月-日）。当前日期未更改。", true);
+          input.value = editableItem(state, taskId, "").dueDate || "";
+          return;
+        }
+        const saved = edit((next) => {
+          const target = editableItem(next, taskId, "");
+          if (value) target.dueDate = value;
+          else delete target.dueDate;
+        });
+        if (!saved) input.value = editableItem(state, taskId, "").dueDate || "";
+        clear.disabled = !input.value;
+        renderDeadlines();
+      };
+      input.addEventListener("change", () => commit(input.value));
+      clear.addEventListener("click", () => {
+        input.value = "";
+        commit("");
+      });
+      field.append(label, clear);
+      return field;
     }
     function focusButton(task, step = null) {
       const button = iconButton(`专注：${step ? step.text : task.text}`, '<circle cx="12" cy="13" r="8"/><path d="M10 1h4M12 5V3m-2 6 5 4-5 3z"/>', () => {
         if (state.timer) {
           return;
         }
-        state.mode = "task";
-        state.selectedTask = task.id;
-        state.selectedStep = step?.id || "";
-        startTimer();
+        startTimer(task.id, step?.id || "");
         $("focus-heading").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "nearest" });
       }, "focus-item-button");
       button.dataset.taskId = task.id;
@@ -554,6 +926,7 @@
     }
     const deletePath = '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6m4-6v6"/>';
     function renderSteps(task, panel) {
+      task = state.tasks.find((entry) => entry.id === task.id);
       panel.replaceChildren();
       const heading = document.createElement("h3");
       heading.className = "panel-heading";
@@ -574,19 +947,19 @@
         const actions = document.createElement("div");
         actions.className = "task-actions";
         actions.append(focusButton(task, step), iconButton(`删除步骤：${step.text}`, deletePath, () => {
-          task.steps = task.steps.filter((s) => s.id !== step.id);
-          if (state.selectedTask === task.id && state.selectedStep === step.id) {
-            state.selectedStep = "";
-          }
-          save();
+          if (!edit((next) => {
+            const target = next.tasks.find((entry) => entry.id === task.id);
+            target.steps = target.steps.filter((s) => s.id !== step.id);
+            if (next.selectedTask === task.id && next.selectedStep === step.id) next.selectedStep = "";
+          })) return;
           renderSteps(task, panel);
           renderTaskOptions();
           renderTaskCount();
           renderTimer();
           panel.querySelector(".step-form input").focus();
         }, "delete-btn"));
-        row.append(completionControl(step, () => row.classList.toggle("is-done", step.done)), text, actions);
-        li.append(row, notesField(step, "详情", "添加想法、链接或具体做法…"));
+        row.append(completionControl(step, task.id, step.id, (done) => row.classList.toggle("is-done", done)), text, actions);
+        li.append(row);
         list.append(li);
       }
       const form = document.createElement("form");
@@ -611,8 +984,9 @@
           input.reportValidity();
           return;
         }
-        task.steps.push({ id: uid(), text, done: false, notes: "" });
-        save();
+        if (!edit((next) => {
+          next.tasks.find((entry) => entry.id === task.id).steps.push({ id: uid(), text, done: false, notes: "" });
+        })) return;
         renderSteps(task, panel);
         renderTaskOptions();
         renderTaskCount();
@@ -620,11 +994,15 @@
         panel.querySelector(".step-form input").focus();
       });
       input.addEventListener("input", () => input.setCustomValidity(""));
-      panel.append(heading, list, form, notesField(task, "任务备注", "记录这件事的背景或想法…"));
+      panel.append(deadlineField(task, task.id), heading, list, form, notesField(task, task.id, "", "任务备注", "记录这件事的背景或想法…"));
     }
     function renderTasks() {
       $("task-list").replaceChildren();
-      for (const task of state.tasks) {
+      for (const view of ["all", "active", "completed"]) {
+        $("tasks-" + view).setAttribute("aria-pressed", String(taskView === view));
+      }
+      const tasks = state.tasks.filter((task) => taskView === "all" || task.done === (taskView === "completed"));
+      for (const task of tasks) {
         const li = document.createElement("li");
         li.className = "task";
         li.dataset.taskId = task.id;
@@ -650,7 +1028,7 @@
         text.textContent = task.text;
         const progress = document.createElement("span");
         progress.className = "task-progress";
-        copy.append(text, progress);
+        copy.append(text, progress, deadlineBadge(task.id));
         title.append(copy);
         title.insertAdjacentHTML("beforeend", '<svg class="chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="m4 2 4 4-4 4"/></svg>');
         title.addEventListener("click", () => {
@@ -666,17 +1044,24 @@
         const actions = document.createElement("div");
         actions.className = "task-actions";
         const remove = iconButton(`删除：${task.text}`, deletePath, () => {
-          state.tasks = state.tasks.filter((t) => t.id !== task.id);
+          if (!edit((next) => {
+            next.tasks = next.tasks.filter((t) => t.id !== task.id);
+            if (next.selectedTask === task.id) {
+              next.selectedTask = "";
+              next.selectedStep = "";
+            }
+          })) return;
           expandedTasks.delete(task.id);
-          if (state.selectedTask === task.id) {
-            state.selectedTask = "";
-            state.selectedStep = "";
-          }
-          save();
           render();
         }, "delete-btn");
         actions.append(focusButton(task), remove);
-        row.append(completionControl(task, () => row.classList.toggle("is-done", task.done)), title, actions);
+        row.append(completionControl(task, task.id, "", (done) => {
+          row.classList.toggle("is-done", done);
+          if (taskView !== "all") {
+            renderTasks();
+            $("tasks-" + taskView).focus();
+          }
+        }), title, actions);
         renderSteps(task, panel);
         li.append(row, panel);
         $("task-list").append(li);
@@ -686,13 +1071,19 @@
     function renderTaskCount() {
       const done = state.tasks.filter((t) => t.done).length;
       $("task-count").textContent = `${done} / ${state.tasks.length} 已完成`;
-      $("tasks-empty").hidden = state.tasks.length > 0;
+      $("tasks-empty").hidden = $("task-list").children.length > 0;
+      $("tasks-empty").textContent = taskView === "completed"
+        ? "还没有已完成的任务。每一点进展都值得记录。"
+        : taskView === "active" && state.tasks.length
+          ? "待办都完成了，给自己一点休息时间。"
+          : "留一点空白。准备好时，添加第一件事。";
       for (const li of $("task-list").children) {
         const task = state.tasks.find((t) => t.id === li.dataset.taskId);
         const progress = li.querySelector(".task-progress");
         progress.textContent = task.steps.length ? `${task.steps.filter((s) => s.done).length} / ${task.steps.length} 步骤` : "";
         progress.hidden = task.steps.length === 0;
       }
+      renderDeadlines();
     }
     function renderTaskOptions() {
       const select = $("focus-task");
@@ -751,20 +1142,37 @@
     function renderTimer() {
       const active = Boolean(state.timer);
       const running = state.timer?.status === "running";
-      const ms = remaining();
+      const resting = state.timer?.kind === "break";
+      const prompt = !active && state.breakPrompt;
+      const restFinished = prompt === "finished";
+      const ms = restFinished ? 0 : remaining();
       const seconds = Math.ceil(ms / 1000);
       $("time").textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
       $("ring-progress").style.strokeDashoffset = String(603.186 * (1 - ms / (state.timer?.total || state.duration * 60000)));
-      $("timer-status").textContent = active ? (running ? "专注进行中" : "已暂停") : "准备就绪";
-      $("timer-caption").textContent = active ? (running ? "不急，一点一点向前" : "歇一口气，随时继续") : "给自己一段不被打扰的时间";
-      $("start-text").textContent = active ? (running ? "暂停专注" : "继续专注") : "开始专注";
+      $("timer-status").textContent = active ? (running ? resting ? "休息中" : "专注进行中" : "已暂停") : restFinished ? "休息时间到了" : "准备就绪";
+      $("timer-caption").textContent = restFinished ? "不急，按自己的节奏来。" : resting ? "给自己一点缓冲时间" : active ? (running ? "不急，一点一点向前" : "歇一口气，随时继续") : "给自己一段不被打扰的时间";
+      $("start-text").textContent = active ? (running ? resting ? "暂停休息" : "暂停专注" : resting ? "继续休息" : "继续专注") : "开始专注";
       $("start").disabled = !active && state.mode === "task" && !focusTarget();
+      $("start").hidden = Boolean(prompt);
       $("reset").disabled = !active;
+      $("reset").hidden = resting || Boolean(prompt);
       $("finish").hidden = !active;
+      $("finish").textContent = resting ? "结束休息" : "结束并记录";
+      $("rest-prompt").hidden = !prompt;
+      $("rest-message").textContent = restFinished
+        ? "休息时间到了。你可以继续，也可以再歇一会儿。"
+        : "这段专注完成了。要歇一会儿吗？";
+      $("take-break").textContent = restFinished ? "再休息 5 分钟" : "休息 5 分钟";
+      $("skip-break").hidden = restFinished;
+      $("next-focus").hidden = !restFinished;
+      $("next-focus").disabled = state.mode === "task" && !focusTarget();
+      $("stop-today").hidden = !restFinished;
       $("free-tab").disabled = active;
       $("task-tab").disabled = active;
       $("focus-task").disabled = active;
-      $("focus-target").hidden = !active;
+      $("focus-label").disabled = resting;
+      $("duration-controls").hidden = resting || restFinished;
+      $("focus-target").hidden = !active || resting;
       $("focus-target").textContent = active ? state.timer.label : "";
       for (const button of document.querySelectorAll(".focus-item-button")) {
         button.disabled = active || !focusTarget(button.dataset.taskId, button.dataset.stepId);
@@ -774,6 +1182,7 @@
         button.setAttribute("aria-pressed", String(Number(button.dataset.minutes) === state.duration));
       }
       document.title = active ? `${$("time").textContent} · Little Focus` : "Little Focus · 待办与番茄钟";
+      renderSupport();
     }
     function render() {
       renderTasks();
@@ -789,25 +1198,43 @@
       $("focus-label").value = state.label;
       renderTimer();
     }
-    function startTimer() {
+    function startTimer(taskId, stepId = "") {
       if (state.timer) {
         return;
       }
-      const target = focusTarget();
-      if (state.mode === "task" && !target) {
+      const next = structuredClone(state);
+      if (taskId) {
+        next.mode = "task";
+        next.selectedTask = taskId;
+        next.selectedStep = stepId;
+      }
+      const target = focusTarget(next.selectedTask, next.selectedStep);
+      if (next.mode === "task" && !target) {
         notify("先选择一条未完成的待办或步骤。");
         return;
       }
       const total = state.duration * 60000;
-      state.timer = {
-        id: uid(), status: "running", total, remaining: total, endAt: clockNow() + total,
-        taskId: state.mode === "task" ? target.task.id : "",
-        stepId: state.mode === "task" ? target.step?.id || "" : "",
-        label: state.mode === "task"
+      delete next.breakPrompt;
+      next.timer = {
+        id: uid(), kind: "focus", status: "running", total, remaining: total, endAt: clockNow() + total,
+        taskId: next.mode === "task" ? target.task.id : "",
+        stepId: next.mode === "task" ? target.step?.id || "" : "",
+        label: next.mode === "task"
           ? target.step ? `${target.task.text} › ${target.step.text}` : target.task.text
           : state.label.trim() || "自由专注"
       };
-      save();
+      if (!save(next)) return;
+      render();
+    }
+    function startBreak() {
+      if (state.timer) return;
+      if (!edit((next) => {
+        delete next.breakPrompt;
+        next.timer = {
+          id: uid(), kind: "break", status: "running", total: 300000, remaining: 300000,
+          endAt: clockNow() + 300000, taskId: "", stepId: "", label: "休息"
+        };
+      })) return;
       render();
     }
     function finishTimer(completed) {
@@ -815,26 +1242,35 @@
         return;
       }
       const timer = state.timer;
-      if (!state.history.some((h) => h.id === timer.id)) {
-        state.history.push({
+      const resting = timer.kind === "break";
+      const elapsed = completed ? timer.total : Math.max(0, timer.total - remaining());
+      const next = structuredClone(state);
+      if (!resting && !next.history.some((h) => h.id === timer.id)) {
+        next.history.push({
           id: timer.id, label: timer.label, taskId: timer.taskId, stepId: timer.stepId,
-          elapsed: completed ? timer.total : Math.max(0, timer.total - remaining()),
+          elapsed,
           endedAt: completed ? timer.endAt : clockNow(), completed
         });
       }
-      state.timer = null;
-      save();
+      next.timer = null;
+      if (completed) next.breakPrompt = resting ? "finished" : "offer";
+      else delete next.breakPrompt;
+      if (!save(next)) {
+        blockedTimer = timer.id;
+        return;
+      }
       render();
       if (!storageFailed && !$("notice").classList.contains("error")) {
-        notify(completed ? "这段专注完成了。休息一下，做得很好。" : "已记录这段专注。每一点投入都有意义。");
+        if (!completed) notify(resting ? "休息已结束，随时可以再歇一会儿。" : `已记录 ${minutesFormat(elapsed)}。随时可以回来。`);
       }
     }
     function tick() {
+      if (deadlineDay !== localDate()) renderDeadlines();
       if (CLOUD && (!cloudReady || cloudFailure)) {
         renderTimer();
         return;
       }
-      if (state.timer?.status === "running" && remaining() <= 0) {
+      if (state.timer?.status === "running" && remaining() <= 0 && blockedTimer !== state.timer.id) {
         finishTimer(true);
       } else {
         renderTimer();
@@ -848,18 +1284,24 @@
         $("new-task").reportValidity();
         return;
       }
-      state.tasks.push(newTask(text));
-      save();
+      if (!edit((next) => { next.tasks.push(newTask(text)); })) return;
       $("new-task").value = "";
+      if (taskView === "completed") taskView = "active";
       render();
       $("new-task").focus();
     });
     $("new-task").addEventListener("input", () => $("new-task").setCustomValidity(""));
+    for (const view of ["all", "active", "completed"]) {
+      $("tasks-" + view).addEventListener("click", () => {
+        taskView = view;
+        renderTasks();
+        renderTimer();
+      });
+    }
     for (const mode of ["free", "task"]) {
       $(mode + "-tab").addEventListener("click", () => {
         if (!state.timer) {
-          state.mode = mode;
-          save();
+          if (!edit((next) => { next.mode = mode; })) return;
           render();
         }
       });
@@ -873,24 +1315,23 @@
       });
     }
     $("focus-label").addEventListener("input", () => {
-      state.label = $("focus-label").value;
-      if (state.timer && !state.timer.taskId) {
-        state.timer.label = state.label.trim() || "自由专注";
-      }
-      save();
+      if (!edit((next) => {
+        next.label = $("focus-label").value;
+        if (next.timer && next.timer.kind !== "break" && !next.timer.taskId) next.timer.label = next.label.trim() || "自由专注";
+      })) $("focus-label").value = state.label;
     });
     $("focus-task").addEventListener("change", () => {
       const option = $("focus-task").selectedOptions[0];
-      state.selectedTask = option?.dataset.taskId || "";
-      state.selectedStep = option?.dataset.stepId || "";
-      save();
+      if (!edit((next) => {
+        next.selectedTask = option?.dataset.taskId || "";
+        next.selectedStep = option?.dataset.stepId || "";
+      })) renderTaskOptions();
       renderTimer();
     });
     for (const button of document.querySelectorAll("[data-minutes]")) {
       button.addEventListener("click", () => {
         if (!state.timer) {
-          state.duration = Number(button.dataset.minutes);
-          save();
+          if (!edit((next) => { next.duration = Number(button.dataset.minutes); })) return;
           renderTimer();
         }
       });
@@ -904,14 +1345,15 @@
         finishTimer(true);
         return;
       }
-      if (state.timer.status === "running") {
-        state.timer.remaining = remaining();
-        state.timer.status = "paused";
-      } else {
-        state.timer.endAt = clockNow() + state.timer.remaining;
-        state.timer.status = "running";
-      }
-      save();
+      if (!edit((next) => {
+        if (next.timer.status === "running") {
+          next.timer.remaining = remaining();
+          next.timer.status = "paused";
+        } else {
+          next.timer.endAt = clockNow() + next.timer.remaining;
+          next.timer.status = "running";
+        }
+      })) return;
       renderTimer();
     });
     $("reset").addEventListener("click", () => {
@@ -925,12 +1367,67 @@
       if (!confirm("重置计时？本次专注不会记录到历史。")) {
         return;
       }
-      state.timer = null;
-      save();
+      if (!edit((next) => { next.timer = null; })) return;
       render();
     });
     $("finish").addEventListener("click", () => finishTimer(state.timer?.status === "running" && remaining() <= 0));
+    $("take-break").addEventListener("click", startBreak);
+    for (const id of ["skip-break", "stop-today"]) {
+      $(id).addEventListener("click", () => {
+        if (state.timer) return;
+        if (!edit((next) => { delete next.breakPrompt; })) return;
+        render();
+      });
+    }
+    $("next-focus").addEventListener("click", () => startTimer());
+    $("quote-next").addEventListener("click", () => {
+      const pool = supportPool();
+      const index = availableQuote(pool, support[pool].index);
+      if (index < 0) return;
+      support[pool] = { window: quoteWindow(), index: availableQuote(pool, index + 1) };
+      saveSupport();
+      renderSupport();
+    });
+    $("quote-hide").addEventListener("click", () => {
+      const pool = supportPool();
+      const index = availableQuote(pool, support[pool].index);
+      if (index < 0) return;
+      support.hidden.push(`${pool}:${index}`);
+      support[pool].window = quoteWindow();
+      support[pool].index = availableQuote(pool, index + 1);
+      if (support[pool].index < 0) support[pool].index = 0;
+      saveSupport();
+      renderSupport();
+    });
+    $("quote-toggle").addEventListener("click", () => {
+      support.enabled = !support.enabled;
+      saveSupport();
+      renderSupport();
+    });
+    $("quote-restore").addEventListener("click", () => {
+      support.hidden = [];
+      saveSupport();
+      renderSupport();
+    });
+    $("suggestion-next").addEventListener("click", () => {
+      support.suggestion = (support.suggestion + 1) % restSuggestions.length;
+      saveSupport();
+      renderSupport();
+    });
+    $("suggestion-skip").addEventListener("click", () => {
+      if (!state.timer || state.timer.kind !== "break") return;
+      support.skipId = state.timer.id;
+      saveSupport();
+      renderSupport();
+    });
     window.addEventListener("storage", (event) => {
+      if (event.key === SUPPORT_KEY || event.key === null) {
+        support = loadSupport();
+        renderSupport();
+      }
+      if (CLOUD && (event.key === null || event.key === DRAFT_KEY || event.key.startsWith(DRAFT_PREFIX))) {
+        updateDraftOptions();
+      }
       if (event.key === STORAGE_KEY || event.key === null) {
         if (CLOUD) {
           if (!cloudBusy && !cloudPending && !cloudFlight && !cloudFailure) {
@@ -943,14 +1440,19 @@
         tick();
       }
     });
-    $("export-backup").addEventListener("click", () => {
-      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    function downloadBackup(content) {
+      const blob = new Blob([content], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `little-focus-${new Date().toISOString().slice(0, 10)}.json`;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    $("export-backup").addEventListener("click", () => downloadBackup(JSON.stringify(state)));
+    $("clear-history").addEventListener("click", () => {
+      if (!confirm("清空所有历史？此操作无法撤销，请先导出 JSON 备份。")) return;
+      if (edit((next) => { next.history = []; })) renderHistory();
     });
     $("import-backup").addEventListener("click", () => $("backup-file").click());
     $("backup-file").addEventListener("change", async () => {
@@ -959,39 +1461,55 @@
         return;
       }
       try {
-        if (file.size > 2 * 1024 * 1024) {
+        if (file.size > MAX_REQUEST_BYTES) {
           throw new Error("备份超过 2 MB，无法导入。");
         }
-        const imported = JSON.parse(await file.text());
+        const decoded = JSON.parse(await file.text());
+        const imported = decoded?.state ?? decoded;
         if (!validState(imported)) {
           throw new Error("备份格式无效，当前数据未更改。");
         }
         if (!confirm("导入任务、步骤和历史？相同 ID 保留现有内容，不导入正在进行的计时。")) {
           return;
         }
-        if (CLOUD && (!cloudReady || cloudFailure)) {
+        if (CLOUD && (!cloudReady || (cloudFailure && !cloudRejected))) {
           throw new Error("请先恢复云端连接，再导入备份。");
         }
         normalize(imported);
-        const tasks = new Set(state.tasks.map((task) => task.id));
-        const history = new Set(state.history.map((entry) => entry.id));
+        const next = structuredClone(state);
+        const tasks = new Map(next.tasks.map((task) => [task.id, task]));
+        const history = new Set(next.history.map((entry) => entry.id));
         let added = 0;
+        let stepsAdded = 0;
         for (const task of imported.tasks) {
           if (!tasks.has(task.id)) {
-            state.tasks.push(task);
-            tasks.add(task.id);
+            next.tasks.push(task);
+            tasks.set(task.id, task);
             added++;
+            stepsAdded += task.steps.length;
+          } else {
+            const existing = tasks.get(task.id);
+            const steps = new Set(existing.steps.map((step) => step.id));
+            for (const step of task.steps) {
+              if (!steps.has(step.id)) {
+                existing.steps.push(step);
+                steps.add(step.id);
+                stepsAdded++;
+              }
+            }
           }
         }
         for (const entry of imported.history) {
           if (!history.has(entry.id)) {
-            state.history.push(entry);
+            next.history.push(entry);
             history.add(entry.id);
           }
         }
-        save();
+        if (!save(next)) return;
         render();
-        notify(`已导入 ${added} 条任务及新增历史。已有 ID 的内容保持不变。`);
+        if (!$("notice").classList.contains("error")) {
+          notify(`已导入 ${added} 条任务、${stepsAdded} 个步骤及新增历史。已有 ID 的内容保持不变。`);
+        }
       } catch (error) {
         console.error("Backup import failed", error);
         notify(error.message, true);
@@ -1000,7 +1518,9 @@
       }
     });
     $("cloud-retry").addEventListener("click", () => {
+      if (cloudBusy || cloudReading) return;
       cloudFailure = "";
+      cloudRejected = false;
       if (!cloudReady) {
         void refreshCloud(true);
       } else {
@@ -1012,15 +1532,65 @@
       updateCloudStatus();
     });
     $("cloud-reload").addEventListener("click", async () => {
-      if (!confirm("丢弃本机未同步更改并加载云端？请先导出 JSON 备份。")) {
+      if (cloudBusy || cloudReading) return;
+      if (!confirm("丢弃当前查看的未同步更改并加载云端？其他草稿保留。请先导出 JSON 备份。")) {
         return;
       }
+      const pending = cloudPending;
+      const flight = cloudFlight;
+      const ready = cloudReady;
       cloudPending = null;
       cloudFlight = null;
       cloudFailure = "";
       cloudReady = false;
-      preserveDraft();
-      await refreshCloud(true);
+      if (await refreshCloud(true, false)) {
+        removeDraft(pending);
+        removeDraft(flight);
+      } else {
+        cloudPending = pending;
+        cloudFlight = flight;
+        cloudReady = ready;
+      }
+      updateCloudStatus();
+    });
+    $("draft-open").addEventListener("click", () => {
+      if (cloudBusy || cloudReading) return;
+      try {
+        if ((cloudPending || cloudFlight) && !preserveDraft()) return;
+        openDraft($("draft-select").value);
+      } catch (error) {
+        console.error("Unable to open draft", error);
+        notify(error.message, true);
+      }
+      updateCloudStatus();
+    });
+    $("draft-export").addEventListener("click", () => {
+      try {
+        const raw = localStorage.getItem($("draft-select").value);
+        if (raw === null) throw new Error("所选草稿已不存在。");
+        downloadBackup(raw);
+      } catch (error) {
+        console.error("Unable to export draft", error);
+        notify(error.message, true);
+      }
+    });
+    $("draft-discard").addEventListener("click", () => {
+      if (cloudBusy || cloudReading) return;
+      try {
+        const key = $("draft-select").value;
+        if ([cloudPending, cloudFlight].some((draft) => draft && (key === DRAFT_PREFIX + draft.mutationId
+          || (key === DRAFT_KEY && legacyDraft?.draft.mutationId === draft.mutationId)))) {
+          notify("这是当前查看的草稿。请先导出备份，再使用“加载云端版本”明确丢弃。", true);
+          return;
+        }
+        const raw = localStorage.getItem(key);
+        if (raw === null || !confirm("永久丢弃所选草稿？请先导出；其他草稿不会删除。")) return;
+        if (localStorage.getItem(key) === raw) localStorage.removeItem(key);
+        updateDraftOptions();
+      } catch (error) {
+        console.error("Unable to discard draft", error);
+        notify("无法丢弃所选草稿，原数据仍保留。", true);
+      }
     });
     $("logout").addEventListener("click", async () => {
       if (cloudPending || cloudFlight || cloudBusy) {

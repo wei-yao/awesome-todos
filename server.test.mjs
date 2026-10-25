@@ -187,6 +187,8 @@ test("PostgreSQL stores data, rejects stale versions, and makes retries idempote
     assert.deepEqual(await store.read(), { revision: 0, state: null, last_write: null });
     const id = randomUUID();
     assert.deepEqual(await store.write(0, id, state()), { revision: 1 });
+    assert.equal(await store.write(0, id, { ...state(), label: "Different payload" }), null);
+    assert.equal(await store.write(1, id, { ...state(), label: "Different payload" }), null);
     assert.deepEqual((await store.read()).state, state());
     assert.deepEqual(await store.write(0, id, state()), { revision: 1 });
     assert.equal(await store.write(0, randomUUID(), state()), null);
@@ -373,6 +375,76 @@ test("Railway OIDC, owner-only access, CSRF, persistence, conflicts and logout",
       assert.ok(Number.isFinite(remote.serverTime));
       assert.equal((await post("/api/state", { ...body, state: { ...state(), tasks: [null] } }, cookie)).status, 400);
       assert.equal((await post("/api/state", body, cookie, "https://attacker.example")).status, 403);
+    });
+    await t.test("task and step deadlines persist while invalid calendar dates cannot alter stored state", async () =>
+    {
+      const before = await store.read();
+      const value = state();
+      value.tasks[0].dueDate = "2028-02-29";
+      value.tasks[0].steps[0].dueDate = "2028-03-01";
+      const body = { revision: before.revision, mutationId: randomUUID(), state: value };
+      assert.equal((await post("/api/state", body, cookie)).status, 200);
+      const saved = await (await request("/api/state", { headers: { Cookie: cookie } })).json();
+      assert.deepEqual(saved.state, value);
+      const stored = await store.read();
+      for (const step of [false, true])
+      {
+        const invalid = structuredClone(value);
+        (step ? invalid.tasks[0].steps[0] : invalid.tasks[0]).dueDate = "2026-02-30";
+        assert.equal((await post("/api/state", {
+          revision: saved.revision, mutationId: randomUUID(), state: invalid
+        }, cookie)).status, 400);
+        assert.deepEqual(await store.read(), stored);
+      }
+    });
+    await t.test("focus and break lifecycle states persist with strict validation and unchanged history", async () =>
+    {
+      const value = state();
+      const timer = { id: "rest", kind: "break", label: "休息", taskId: "", stepId: "",
+        status: "running", total: 300000, remaining: 300000, endAt: Date.now() + 300000 };
+      for (const stage of [
+        { ...value, breakPrompt: "offer" },
+        { ...value, timer },
+        { ...value, timer: { ...timer, status: "paused", remaining: 120000 } },
+        { ...value, breakPrompt: "finished" },
+        value
+      ])
+      {
+        const before = await store.read();
+        assert.equal((await post("/api/state", {
+          revision: before.revision, mutationId: randomUUID(), state: stage
+        }, cookie)).status, 200);
+        const stored = await store.read();
+        assert.deepEqual(stored.state, stage);
+        for (const invalid of [
+          { ...value, breakPrompt: "invalid" }, { ...value, timer, breakPrompt: "offer" },
+          { ...value, timer: { ...timer, total: 900000 } },
+          { ...value, timer: { ...timer, taskId: "task" } }
+        ])
+        {
+          assert.equal((await post("/api/state", {
+            revision: stored.revision, mutationId: randomUUID(), state: invalid
+          }, cookie)).status, 400);
+          assert.deepEqual(await store.read(), stored);
+        }
+      }
+    });
+    await t.test("request size includes the entire UTF-8 envelope at the exact 2 MiB boundary", async () =>
+    {
+      const before = await store.read();
+      const body = { revision: before.revision, mutationId: randomUUID(), state: state(), padding: "中" };
+      body.padding += "x".repeat(2 * 1024 * 1024 - Buffer.byteLength(JSON.stringify(body)));
+      assert.equal(Buffer.byteLength(JSON.stringify(body)), 2 * 1024 * 1024);
+      const accepted = await post("/api/state", body, cookie);
+      assert.equal(accepted.status, 200);
+      const revision = (await accepted.json()).revision;
+      const oversized = { ...body, padding: body.padding + "x" };
+      assert.equal((await post("/api/state", oversized, cookie)).status, 413);
+      assert.equal((await store.read()).revision, revision);
+      assert.deepEqual((await store.read()).state, state());
+      const different = { ...body, padding: "", state: { ...state(), label: "different" } };
+      assert.equal((await post("/api/state", different, cookie)).status, 409);
+      assert.equal((await store.read()).revision, revision);
     });
     await t.test("logout revokes the previous cookie", async () =>
     {
