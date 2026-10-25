@@ -51,6 +51,10 @@ light/dark appearance, including changes while the page is open. Light mode uses
 the original warm whites and soft green accents; dark mode uses charcoal surfaces, with limited accent
 colors and distinct error/deadline warnings. Native form controls follow the same
 color scheme; keyboard focus stays visible and reduced-motion preferences apply.
+The task list uses an open, unboxed layout; the timer remains the main contained
+surface. Task/history rows do not animate on every render, so typing, ticking,
+and synchronizing do not repeatedly fade the content in. All task, timer,
+history, backup, and motto controls remain available.
 
 ## Task views
 

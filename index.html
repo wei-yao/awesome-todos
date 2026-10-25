@@ -7,7 +7,7 @@
   <title>Little Focus · 待办与番茄钟</title>
   <style>
     :root {
-      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
       color-scheme: light;
       color: var(--ink);
       background: var(--background);
@@ -41,22 +41,19 @@
     button { -webkit-tap-highlight-color: transparent; }
     button, input, select, textarea { outline-offset: 4px; accent-color: var(--accent); }
     :focus-visible { outline: 2px solid var(--accent); }
-    button { transition: background .18s, transform .18s, opacity .18s; }
-    button:active:not(:disabled) { transform: scale(.97); }
-    main { width: min(480px, calc(100% - 36px)); margin: 64px auto 36px; }
-    .eyebrow { display: flex; align-items: center; gap: 8px; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: 2px; }
-    .brand-icon { width: 22px; height: 22px; }
-    .heading { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
-    h1 { font-size: clamp(24px, 6vw, 32px); letter-spacing: -1.2px; font-weight: 650; line-height: 1.25; margin: 0; }
+    button { transition: background-color .16s ease-out, color .16s ease-out; }
+    main { width: min(520px, calc(100% - 40px)); margin: 56px auto 40px; }
+    .heading { display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: clamp(24px, 6vw, 30px); letter-spacing: -.03em; font-weight: 600; line-height: 1.4; margin: 0; text-wrap: balance; }
     .date { color: var(--muted); font-size: 12px; }
-    .subtitle { color: var(--muted); margin: 10px 0 28px; font-size: 14px; }
-    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
-    .tasks-card { padding: 21px 22px 10px; }
+    .subtitle { color: var(--muted); margin: 8px 0 32px; font-size: 14px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+    .tasks-card { padding: 0 0 8px; background: transparent; border: 0; border-radius: 0; }
     .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     h2 { font-size: 15px; font-weight: 650; margin: 0; }
     .count { color: var(--muted); font-size: 12px; }
     .task-filters { display: flex; gap: 6px; margin-top: 14px; }
-    .task-filters button { flex: 1; border: 0; border-radius: 8px; padding: 6px; background: transparent; color: var(--muted); font-size: 12px; }
+    .task-filters button { flex: 1; min-height: 40px; border: 0; border-radius: 8px; padding: 6px; background: transparent; color: var(--muted); font-size: 13px; }
     .task-filters button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
     .add-form { display: flex; gap: 8px; border-bottom: 1px solid var(--line); margin-top: 14px; padding-bottom: 13px; }
     .add-form input { min-width: 0; flex: 1; border: 0; background: transparent; color: var(--ink); padding: 8px 0; font-size: 14px; }
@@ -64,14 +61,13 @@
     .add-btn { width: 34px; height: 34px; align-self: center; background: var(--accent-soft); color: var(--accent); border: 0; border-radius: 10px; font-size: 24px; line-height: 1; }
     .add-btn:hover { background: var(--line); }
     .task-list { list-style: none; margin: 0; padding: 4px 0; }
-    .task { animation: appear .25s ease both; }
     .task + .task { border-top: 1px solid var(--line); }
     .task-row, .step-row { display: flex; align-items: center; gap: 11px; min-height: 62px; }
     .completion { display: grid; place-items: center; position: relative; flex: 0 0 23px; min-height: 34px; cursor: pointer; }
     .completion input { position: absolute; width: 22px; height: 22px; opacity: 0; margin: 0; cursor: pointer; }
     .check { display: grid; place-items: center; flex: 0 0 21px; height: 21px; border: 1.5px solid var(--control-line); border-radius: 7px; transition: background .25s, border-color .25s, transform .25s; }
     .check svg { width: 14px; fill: none; stroke: var(--surface); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 22; stroke-dashoffset: 22; transition: stroke-dashoffset .28s .06s; }
-    .completion input:checked + .check { background: var(--accent); border-color: var(--accent); animation: check-pop .3s ease; }
+    .completion input:checked + .check { background: var(--accent); border-color: var(--accent); }
     .completion input:checked + .check svg { stroke-dashoffset: 0; }
     .completion input:focus-visible + .check { outline: 2px solid var(--accent); outline-offset: 4px; }
     .task-text { min-width: 0; overflow-wrap: anywhere; font-size: 14px; transition: color .25s; text-decoration: line-through transparent; text-decoration-thickness: 1px; }
@@ -82,7 +78,7 @@
     .task-progress { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
     .chevron { width: 12px; height: 12px; flex-shrink: 0; fill: none; stroke: var(--muted); stroke-width: 1.5; transition: transform .2s; }
     .task-title[aria-expanded="true"] .chevron { transform: rotate(90deg); }
-    .task-panel { margin-bottom: 14px; border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--surface); animation: appear .2s ease; }
+    .task-panel { margin: 0 0 16px 34px; border-top: 1px solid var(--line); padding: 14px 0 0; }
     .panel-heading { color: var(--muted); font-size: 11px; font-weight: 600; margin: 0; }
     .step-list { list-style: none; padding: 0; margin: 4px 0 0; }
     .step + .step { border-top: 1px solid var(--line); }
@@ -103,21 +99,20 @@
     .step-form .add-btn { width: 29px; height: 29px; font-size: 21px; }
     .focus-target { margin: 10px 0 0; color: var(--accent); font-size: 12px; overflow-wrap: anywhere; }
     .task-actions { display: flex; gap: 2px; flex-shrink: 0; }
-    .icon-btn { border: none; background: transparent; color: var(--muted); border-radius: 8px; width: 30px; height: 32px; display: grid; place-items: center; }
+    .icon-btn { border: none; background: transparent; color: var(--muted); border-radius: 8px; width: 34px; height: 40px; display: grid; place-items: center; }
     .icon-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
     .icon-btn:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
     .delete-btn:hover:not(:disabled) { color: var(--danger) !important; background: var(--danger-soft) !important; }
     .empty { margin: 20px 0; font-size: 13px; color: var(--muted); text-align: center; }
-    .focus-card { margin-top: 18px; padding: 22px; overflow: hidden; }
+    .focus-card { margin-top: 24px; padding: 24px; }
     .focus-label { display: flex; align-items: center; gap: 7px; }
-    .small-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
     .timer-status { color: var(--muted); font-size: 12px; }
     .mode-tabs { display: flex; padding: 4px; background: var(--timer); border-radius: 10px; margin-top: 20px; gap: 4px; }
-    .mode-tabs button { flex: 1; border: 0; border-radius: 7px; padding: 6px; color: var(--muted); background: transparent; font-size: 12px; }
+    .mode-tabs button { flex: 1; min-height: 40px; border: 0; border-radius: 7px; padding: 6px; color: var(--muted); background: transparent; font-size: 13px; }
     .mode-tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 4px #00000008; }
     .focus-input { display: block; width: 100%; background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; font-size: 13px; padding: 10px 11px; height: 43px; margin-top: 12px; }
-    .timer-area { text-align: center; padding: 26px 0 20px; }
-    .timer-ring { width: 204px; height: 204px; margin: auto; position: relative; display: grid; place-items: center; }
+    .timer-area { text-align: center; padding: 28px 0 24px; }
+    .timer-ring { width: min(204px, 100%); aspect-ratio: 1; margin: auto; position: relative; display: grid; place-items: center; }
     .ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
     .ring circle { fill: none; stroke-width: 3; }
     .ring-track { stroke: var(--line); }
@@ -125,7 +120,7 @@
     .time { display: block; font-size: 48px; line-height: 1.2; font-weight: 450; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
     .timer-caption { font-size: 11px; color: var(--muted); margin-top: 7px; letter-spacing: 1px; }
     .duration { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 18px; }
-    .duration button { border: 0; border-radius: 20px; padding: 4px 12px; background: transparent; font-size: 11px; color: var(--muted); }
+    .duration button { min-height: 40px; border: 0; border-radius: 8px; padding: 6px 10px; background: transparent; font-size: 12px; color: var(--muted); }
     .duration button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
     .controls { display: flex; align-items: center; gap: 9px; }
     .primary { flex: 1; border: 0; background: var(--primary); color: var(--on-primary); border-radius: 11px; padding: 11px; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 7px; }
@@ -134,13 +129,14 @@
     .secondary { border: 1px solid var(--line); background: transparent; border-radius: 11px; padding: 10px 13px; font-size: 13px; }
     .finish { display: block; margin: 12px auto 0; font-size: 12px; border: 0; background: transparent; color: var(--muted); padding: 3px 10px; }
     .finish:hover { color: var(--accent); }
-    .support { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px; color: var(--muted); font-size: 12px; }
+    .support { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 13px; line-height: 1.8; }
     .support p { margin: 0 0 8px; }
     .quiet-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-    .quiet-actions button { border: 1px solid var(--line); border-radius: 7px; background: transparent; color: inherit; padding: 4px 8px; font-size: 11px; }
-    .settings-card { padding: 22px; }
+    .quiet-actions button { min-height: 40px; border: 1px solid var(--line); border-radius: 7px; background: transparent; color: inherit; padding: 6px 10px; font-size: 12px; }
+    .support .quiet-actions button { border: 0; padding: 4px 8px; margin-left: -8px; }
+    .settings-card { padding: 24px; }
     .motto-list { list-style: none; margin: 16px 0; padding: 0; }
-    .motto-item { border-top: 1px solid var(--line); padding: 12px 0; }
+    .motto-item { border-top: 1px solid var(--line); padding: 20px 0; }
     .motto-item textarea { min-height: 60px; }
     .motto-item select { max-width: 100%; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 4px 8px; }
     .settings-copy { font-size: 12px; color: var(--muted); }
@@ -148,11 +144,11 @@
     .rest-prompt { margin-top: 14px; font-size: 13px; color: var(--ink); }
     .rest-suggestion { margin-top: 14px; font-size: 12px; color: var(--muted); }
     .rest-suggestion p { margin: 0 0 8px; }
-    .history { padding: 24px 2px 0; }
+    .history { padding: 32px 0 0; }
     .history h2 { font-size: 13px; }
     .history-total { font-size: 11px; color: var(--muted); }
     .history-list { list-style: none; padding: 0; margin: 12px 0 0; }
-    .history-item { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: flex-start; animation: appear .25s ease; }
+    .history-item { display: flex; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
     .history-icon { background: var(--accent-soft); color: var(--accent); border-radius: 8px; padding: 2px 7px; font-size: 13px; }
     .history-copy { flex: 1; min-width: 0; }
     .history-name { font-size: 13px; overflow-wrap: anywhere; }
@@ -170,9 +166,14 @@
     .cloud-controls button, .cloud-controls a, .cloud-controls select, .backup-controls button, .backup-controls label { border-color: var(--control-line); }
     [inert] { cursor: not-allowed; }
     [hidden] { display: none !important; }
-    @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes check-pop { 50% { transform: scale(1.16); } }
-    @media (max-width: 520px) { main { margin-top: 32px; } .tasks-card, .focus-card { padding-left: 18px; padding-right: 18px; } }
+    @media (max-width: 520px) {
+      main { margin-top: 32px; }
+      .focus-card, .settings-card { padding: 18px; }
+      .task-row { gap: 8px; }
+      .task-actions { gap: 0; }
+      .icon-btn { width: 30px; }
+      .task-panel { margin-left: 31px; }
+    }
     @media (prefers-color-scheme: dark) {
       :root { color-scheme: dark; --background: #181818; --surface: #242424; --ink: #ededed; --muted: #b5b5b5; --line: #414141; --control-line: #909090; --accent: #a5c6b0; --accent-soft: #303030; --timer: #303030; --primary: #dedede; --on-primary: #202020; --primary-hover: #ffffff; --danger: #ffaaaa; --danger-soft: #392626; --shadow: none; }
     }
@@ -182,10 +183,6 @@
 <body>
   <main>
     <header>
-      <div class="eyebrow">
-        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 18C4 10 10 5 20 4c0 10-5 16-12 14M5 21 15 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        LITTLE FOCUS
-      </div>
       <div class="heading"><h1>把今天，慢慢做好。</h1></div>
       <p class="subtitle"><span id="today" class="date"></span> · 一次一件事，就很好。</p>
     </header>
@@ -222,7 +219,7 @@
     </section>
     <section class="card focus-card" aria-labelledby="focus-heading">
       <div class="section-head">
-        <h2 id="focus-heading" class="focus-label"><span class="small-dot"></span>专注时刻</h2>
+        <h2 id="focus-heading" class="focus-label">专注时刻</h2>
         <span id="timer-status" class="timer-status">准备就绪</span>
       </div>
       <div class="mode-tabs" role="tablist" aria-label="专注模式">
